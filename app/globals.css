@@ -69,9 +69,9 @@ input,select,.select-trigger{min-width:0;max-width:100%}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
 /* Keep centering separate from the transform owned by Animate UI. */
-.modal-content{translate:-50% -50%;transform:none}
+.modal-content{inset:16px;margin:auto;height:fit-content;transform:none}
 @media(max-width:800px){
- .modal-content.mobile-navigation{translate:none;transform:none}
+ .modal-content.mobile-navigation{inset:12px auto auto 12px;margin:0;transform:none}
  .topbar .top-status{display:none}
  .topbar>span:first-child{min-width:0;overflow:hidden;white-space:nowrap;font-size:10px;gap:4px}
  .topbar>span:first-child>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
