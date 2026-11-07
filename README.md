@@ -54,15 +54,21 @@ Sebelum produksi: login dengan dua akun berbeda, buat transaksi di masing-masing
 
 Gunakan hosting Node.js yang mendukung Next.js serta PostgreSQL. Set seluruh environment variable di pengaturan secret hosting. Jalankan migrasi sekali sebelum aplikasi menerima transaksi. Build dengan `npm run build`, start dengan `npm run start`. Daftarkan URL callback produksi persis seperti domain hosting. Source ini tidak memakai autentikasi atau hosting Sites.
 
-## Status penyerahan
+## Sprint 1: responsive UI dan produksi
 
-Uji rumus harga satuan, jumlah, validasi tanggal/nominal, harga nol, dan rugi lulus. Pemeriksaan sintaks 11 file TypeScript/TSX juga lulus. Implementasi Sprint 1 tersedia sebagai source. Belum di-deploy. Instalasi dependensi di lingkungan pembuatan terhambat akses registry; full build, pemeriksaan tipe, login Google end-to-end, dan integrasi PostgreSQL belum terverifikasi. Jangan anggap mode demo sebagai bukti login atau penyimpanan online telah aktif.
+- Layout mobile memakai grid yang dapat menyusut, form satu kolom, tombol minimal 44 px, dan tabel dengan scroll horizontal di dalam kontainernya.
+- Tombol lipat sidebar berupa ikon di sebelah logo; navigasi mobile tersedia melalui drawer dengan focus management.
+- Button, Dialog/Sheet, Alert Dialog, Select, dan animasi status menggunakan primitive resmi `@animate-ui/react`. Input tanggal/angka/file dan tabel tetap elemen semantik; grafik memakai Recharts karena bukan komponen Animate UI.
+- Grafik harian/mingguan/bulanan/tahunan/custom, ekspor Excel/PDF, stok manual dan pengurangan stok dari transaksi.
+- Nomor nota otomatis per akun, dibuat secara atomik di PostgreSQL.
+- Gambar JPG/PNG/WebP maksimal 3 MB pada produksi agar sesuai batas request Vercel; akses gambar memerlukan sesi pemilik.
+- Jalankan kedua migrasi dengan `npm run db:migrate` sebelum menerima transaksi. Migrasi bersifat aditif dan dicatat dalam `schema_migrations`.
+- Build produksi dan pemeriksaan TypeScript lulus. Lima pengujian rumus/validasi, agregasi grafik, serta rekonsiliasi stok lulus.
 
-Belum termasuk manajemen stok, retur, diskon, ongkir, biaya admin, akuntansi akrual, maupun laba bersih. Input harga rupiah bulat, jumlah pcs positif. Semua data penjualan akun dimuat untuk Sprint 1; pagination server diperlukan jika volume data bertambah besar.
+Google OAuth produksi: gunakan `AUTH_URL=https://bajuku-swart.vercel.app` dan redirect URI `https://bajuku-swart.vercel.app/api/auth/callback/google`. Simpan secret hanya pada environment hosting. Aktivasi nyata perlu diverifikasi lewat login dan penyimpanan pada deployment.
 
 ## Referensi konfigurasi
 
+- https://animate-ui.com/docs/react
 - https://authjs.dev/getting-started/providers/google
-- https://authjs.dev/getting-started/installation
 - https://authjs.dev/getting-started/deployment
-- https://developers.google.com/identity/protocols/oauth2/web-server

@@ -3,7 +3,7 @@ export const transactionSchema=z.object({
  date:z.string().regex(/^\d{4}-\d{2}-\d{2}$/).refine(v=>{const d=new Date(v+'T00:00:00Z');return !isNaN(d.getTime())&&d.toISOString().slice(0,10)===v},'Tanggal tidak valid'),
  invoice:z.string().trim().max(80),product:z.string().trim().min(1,'Nama baju wajib diisi').max(120),variant:z.string().trim().max(80),
  quantity:z.number().int().min(1).max(10000),price:z.number().int().min(0).max(1000000000),cost:z.number().int().min(0).max(1000000000),
- payment:z.enum(['Tunai','Transfer bank','QRIS','E-wallet','Kartu']),notes:z.string().trim().max(500)
+ payment:z.enum(['Tunai','Transfer bank','QRIS','E-wallet','Kartu']),notes:z.string().trim().max(500),imageId:z.union([z.string().uuid(),z.literal('')]).default('')
 });
 export type TransactionInput=z.infer<typeof transactionSchema>;
 export type Transaction=TransactionInput&{id:string};
