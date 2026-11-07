@@ -68,3 +68,11 @@ input,select,.select-trigger{min-width:0;max-width:100%}
  .image-preview{flex-wrap:wrap}.select-trigger{font-size:16px}.login-panel{padding:32px 20px}.login-card h2{font-size:30px}
 }
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+/* Keep centering separate from the transform owned by Animate UI. */
+.modal-content{translate:-50% -50%;transform:none}
+@media(max-width:800px){
+ .modal-content.mobile-navigation{translate:none;transform:none}
+ .topbar .top-status{display:none}
+ .topbar>span:first-child{min-width:0;overflow:hidden;white-space:nowrap;font-size:10px;gap:4px}
+ .topbar>span:first-child>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
