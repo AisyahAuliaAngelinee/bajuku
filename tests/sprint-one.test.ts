@@ -17,3 +17,14 @@ test('inventory incorporates sales once, matches normalized products, and reflec
  assert.equal(inventorySummary(movements,[{...sale,quantity:4}])[0].balance,1);
  assert.equal(inventorySummary(movements,[])[0].balance,5);
 });
+test('stock stays scoped to product and variant across stock and sale edits/deletes',()=>{
+ const incoming={id:'in',date:sale.date,product:'Kaos',variant:'M',quantity:10,direction:'in' as const,notes:''};
+ const other={...incoming,id:'other',variant:'L',quantity:7};
+ const summary=inventorySummary([incoming,other],[sale]);
+ assert.equal(summary.find(p=>p.variant==='M')?.balance,8);
+ assert.equal(summary.find(p=>p.variant==='L')?.balance,7);
+ assert.equal(inventorySummary([{...incoming,quantity:6}],[sale])[0].balance,4);
+ assert.equal(inventorySummary([],[sale])[0].balance,-2);
+ assert.equal(inventorySummary([incoming],[])[0].balance,10);
+ assert.equal(inventorySummary([incoming,{...incoming,id:'legacy',direction:'out',quantity:5}],[sale])[0].outgoing,2);
+});

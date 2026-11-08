@@ -76,3 +76,12 @@ input,select,.select-trigger{min-width:0;max-width:100%}
  .topbar>span:first-child{min-width:0;overflow:hidden;white-space:nowrap;font-size:10px;gap:4px}
  .topbar>span:first-child>b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 }
+
+/* Contain scrollable tables and animated paint inside the viewport. */
+html,body{width:100%;max-width:100%;overflow-x:clip}
+.shell{width:100%;overflow-x:clip}
+.table-scroll{contain:inline-size;max-width:100%;overflow-x:auto}
+.sales-chart{overflow:hidden;contain:inline-size}
+.inventory-card .empty{width:100%;text-align:center;padding:36px 16px}
+.stock-metrics strong{min-width:0;overflow-wrap:anywhere}
+@media(max-width:800px){.workspace{flex:1 1 0%;min-width:0}.topbar{width:100%}.content{overflow-x:clip}}
