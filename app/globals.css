@@ -85,3 +85,8 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
 .inventory-card .empty{width:100%;text-align:center;padding:36px 16px}
 .stock-metrics strong{min-width:0;overflow-wrap:anywhere}
 @media(max-width:800px){.workspace{flex:1 1 0%;min-width:0}.topbar{width:100%}.content{overflow-x:clip}}
+
+.transactions .product{min-width:240px;max-width:340px;align-items:center}.product>span{flex:0 0 40px}.product>div{min-width:180px;flex:1}.product strong,.product small{overflow-wrap:break-word;word-break:normal;max-width:none}.transactions th:first-child,.transactions td:first-child{min-width:280px}
+.avatar{flex-shrink:0;overflow:hidden}.avatar img{width:100%;height:100%;object-fit:cover;border-radius:inherit}
+.sort-heading{background:none;color:inherit;padding:0;min-height:32px;white-space:nowrap;font:inherit;letter-spacing:inherit;justify-content:flex-start}.sort-heading svg{opacity:.7}.segmented button[data-state=on]{background:var(--green);color:#fff}.segmented button:hover{background:#e7eee7}.segmented button[data-state=on]:hover{background:var(--green)}
+@media(max-width:800px){.segmented{display:flex;flex-wrap:wrap;gap:4px}.segmented button{flex:1 1 auto;min-height:44px}.transactions .product{min-width:220px}.transactions th:first-child,.transactions td:first-child{min-width:260px}}

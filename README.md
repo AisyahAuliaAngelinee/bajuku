@@ -72,3 +72,11 @@ Google OAuth produksi: gunakan `AUTH_URL=https://bajuku-swart.vercel.app` dan re
 - https://animate-ui.com/docs/react
 - https://authjs.dev/getting-started/providers/google
 - https://authjs.dev/getting-started/deployment
+
+### Catalog, invoice previews, and table sorting
+
+New transactions select a product and variant from incoming stock. Historical transactions may keep their original product/variant while being edited. Google session images are displayed in the account area with an initials fallback. Chart periods use Animate UI Toggle Group.
+
+Invoice previews reserve a number atomically per account and generated model/size/color prefix, e.g. `ECT-L-HITAM-001`. Size is detected from slash-separated variants in either `L / Hitam` or `Hitam / L` order; missing size/color use `OS`/`NA`. The sequence is 001–999 per prefix; reaching 999 returns an explicit error. Existing invoice numbers remain immutable. Cancelled forms may leave gaps. A server signature binds the reserved number to the account and selected catalog entry; save verifies it and serializes duplicate checks. No schema migration is required.
+
+Data-column headers toggle ascending/descending sorting in the sales, stock balance, and movement history tables. Action columns are not sortable.

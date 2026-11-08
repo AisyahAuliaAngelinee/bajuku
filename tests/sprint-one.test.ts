@@ -28,3 +28,29 @@ test('stock stays scoped to product and variant across stock and sale edits/dele
  assert.equal(inventorySummary([incoming],[])[0].balance,10);
  assert.equal(inventorySummary([incoming,{...incoming,id:'legacy',direction:'out',quantity:5}],[sale])[0].outgoing,2);
 });
+
+import {invoicePrefix,formatInvoice} from '../lib/invoice';
+import {signInvoice,verifyInvoice} from '../lib/invoice-reservation';
+import {sortRows} from '../lib/sorting';
+test('invoice code normalizes model and size/color order with three digit sequence',()=>{
+ assert.equal(invoicePrefix('Essential Cotton Tee','Hitam / L'),'ECT-L-HITAM');
+ assert.equal(invoicePrefix('Essential Cotton Tee','L / Hitam'),'ECT-L-HITAM');
+ assert.equal(formatInvoice('ECT-L-HITAM',1),'ECT-L-HITAM-001');
+ assert.equal(formatInvoice('ECT-L-HITAM',999),'ECT-L-HITAM-999');
+ assert.throws(()=>formatInvoice('ECT-L-HITAM',1000));
+});
+test('invoice reservation is bound to owner, model, variant and invoice',()=>{
+ process.env.AUTH_SECRET='test-only-secret';
+ const proof=signInvoice('owner','Kaos','L / Hitam','K-L-HITAM-001');
+ assert.ok(verifyInvoice('owner','Kaos','L / Hitam','K-L-HITAM-001',proof));
+ assert.equal(verifyInvoice('other','Kaos','L / Hitam','K-L-HITAM-001',proof),false);
+ assert.equal(verifyInvoice('owner','Kaos','M / Hitam','K-L-HITAM-001',proof),false);
+ assert.equal(verifyInvoice('owner','Kaos','L / Hitam','K-L-HITAM-002',proof),false);
+ assert.equal(verifyInvoice('owner','Kaos','L / Hitam','K-L-HITAM-001','invalid'),false);
+});
+test('table sorting compares numbers numerically without mutating the source',()=>{
+ const values=[{n:10},{n:2},{n:30}];
+ assert.deepEqual(sortRows(values,{key:'n',direction:'asc'},r=>r.n).map(r=>r.n),[2,10,30]);
+ assert.deepEqual(sortRows(values,{key:'n',direction:'desc'},r=>r.n).map(r=>r.n),[30,10,2]);
+ assert.deepEqual(values.map(r=>r.n),[10,2,30]);
+});
