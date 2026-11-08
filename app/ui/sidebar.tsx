@@ -3,7 +3,7 @@ import Link from 'next/link';
 import {useEffect,useState} from 'react';
 import {Shirt,LayoutDashboard,ReceiptText,Package,PanelLeftClose,PanelLeftOpen,Menu,X,History,Download} from 'lucide-react';
 import {Button,Modal,Dialog} from './controls';
-export const menus=[{id:'overview',label:'Ringkasan',Icon:LayoutDashboard},{id:'transactions',label:'Transaksi harian',Icon:ReceiptText},{id:'inventory',label:'Barang masuk & keluar',Icon:Package},{id:'history',label:'Transaction History',Icon:History},{id:'downloads',label:'Download History',Icon:Download}] as const;
+export const menus=[{id:'overview',label:'Ringkasan',Icon:LayoutDashboard},{id:'inventory',label:'Barang masuk & keluar',Icon:Package},{id:'transactions',label:'Transaksi harian',Icon:ReceiptText},{id:'history',label:'Transaction History',Icon:History},{id:'downloads',label:'Download History',Icon:Download}] as const;
 export type MenuId=typeof menus[number]['id'];
 export default function Sidebar({name,image,logout,collapsed,onCollapse,active,onSelect,demo=false}:{demo?:boolean;name:string;image?:string;logout?:React.ReactNode;collapsed:boolean;onCollapse:()=>void;active:MenuId;onSelect:(id:MenuId)=>void}){
  const [mobileOpen,setMobileOpen]=useState(false);const [imageFailed,setImageFailed]=useState(false);

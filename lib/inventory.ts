@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {transactionSchema,type Transaction} from './transactions';
-export const stockSchema=transactionSchema.pick({date:true,product:true,variant:true,quantity:true,notes:true}).extend({direction:z.enum(['in','out']),price:transactionSchema.shape.price.nullable().optional(),cost:transactionSchema.shape.cost.nullable().optional()});
+export const stockSchema=transactionSchema.pick({date:true,product:true,variant:true,quantity:true,notes:true}).extend({direction:z.enum(['in','out']),imageId:transactionSchema.shape.imageId.optional(),price:transactionSchema.shape.price.nullable().optional(),cost:transactionSchema.shape.cost.nullable().optional()});
 export type StockInput=z.infer<typeof stockSchema>;
 export type StockMovement=StockInput&{id:string;createdAt?:string};
 export const productKey=(product:string,variant:string)=>JSON.stringify([product.trim().toLocaleLowerCase('id-ID'),variant.trim().toLocaleLowerCase('id-ID')]);
