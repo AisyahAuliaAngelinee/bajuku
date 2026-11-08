@@ -54,3 +54,12 @@ test('table sorting compares numbers numerically without mutating the source',()
  assert.deepEqual(sortRows(values,{key:'n',direction:'desc'},r=>r.n).map(r=>r.n),[30,10,2]);
  assert.deepEqual(values.map(r=>r.n),[10,2,30]);
 });
+
+import {recentHistory,type HistoryEntry} from '../lib/history';
+test('history expires at exactly 30 days based on recorded activity time',()=>{
+ const now=Date.UTC(2026,10,8,12);const row:HistoryEntry={id:'audit',sourceId:'sale',source:'sale',action:'created',product:'Kaos',variant:'M',quantity:2,direction:'out',notes:'',invoice:'K-M-NA-001',occurredAt:new Date(now).toISOString()};
+ const old={...row,id:'old',occurredAt:new Date(now-30*86400000).toISOString()};
+ const recent={...row,id:'recent',occurredAt:new Date(now-30*86400000+1).toISOString()};
+ assert.deepEqual(recentHistory([old,recent,row],now).map(r=>r.id),['recent','audit']);
+ assert.equal(row.quantity,2);
+});

@@ -1,0 +1,5 @@
+export type HistoryEntry={id:string;sourceId:string;source:'sale'|'stock';action:'created'|'updated'|'deleted';product:string;variant:string;quantity:number;direction:string;notes:string;invoice:string;occurredAt:string};
+export const HISTORY_DAYS=30;
+export function recentHistory(rows:HistoryEntry[],now=Date.now()){return rows.filter(r=>new Date(r.occurredAt).getTime()>now-HISTORY_DAYS*86400000)}
+export const historyAction={created:'Ditambahkan',updated:'Diedit',deleted:'Dihapus'};
+export function addDemoHistory(source:'sale'|'stock',action:HistoryEntry['action'],row:{id:string;product:string;variant:string;quantity:number;notes:string;invoice?:string;direction?:string}){const rows=JSON.parse(sessionStorage.getItem('bajuku-demo-history')||'[]') as HistoryEntry[];sessionStorage.setItem('bajuku-demo-history',JSON.stringify(recentHistory([{...row,id:crypto.randomUUID(),sourceId:row.id,source,action,invoice:row.invoice||'',direction:source==='sale'?'out':row.direction||'in',occurredAt:new Date().toISOString()},...rows])))}

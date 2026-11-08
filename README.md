@@ -80,3 +80,11 @@ New transactions select a product and variant from incoming stock. Historical tr
 Invoice previews reserve a number atomically per account and generated model/size/color prefix, e.g. `ECT-L-HITAM-001`. Size is detected from slash-separated variants in either `L / Hitam` or `Hitam / L` order; missing size/color use `OS`/`NA`. The sequence is 001–999 per prefix; reaching 999 returns an explicit error. Existing invoice numbers remain immutable. Cancelled forms may leave gaps. A server signature binds the reserved number to the account and selected catalog entry; save verifies it and serializes duplicate checks. No schema migration is required.
 
 Data-column headers toggle ascending/descending sorting in the sales, stock balance, and movement history tables. Action columns are not sortable.
+
+### Transaction History and retention
+
+`/transaction-history` is an authenticated audit page; `/demo/transaction-history` uses session-scoped demo activity. Database triggers record create/update/delete events atomically with stock and sales writes. History deletion affects only the log, never the source transaction or stock balance. Existing source records from the last 30 days are backfilled once by migration 003.
+
+Migration 003 is guarded by the shared migration advisory lock and runs once on the first database read/write after deployment (or via `npm run db:migrate`). Its SQL is mirrored in `lib/history-schema.ts` for the server runtime. History older than 30 days is excluded and physically deleted on history reads. Vercel runs an additional fixed expiry sweep daily at 00:00 UTC through `/api/cron/history-cleanup`. This idempotent endpoint accepts no scope/cutoff parameters and returns no user data. Quiet-account physical deletion may wait until the daily sweep; old rows are never returned by the history page.
+
+Table loading states cover initial route fetches and refresh/mutation transitions. Stock summary edit/delete controls open the underlying incoming-stock and sales records so aggregates are not overwritten ambiguously.
