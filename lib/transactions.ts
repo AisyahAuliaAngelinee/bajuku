@@ -6,6 +6,6 @@ export const transactionSchema=z.object({
  payment:z.enum(['Tunai','Transfer bank','QRIS','E-wallet','Kartu']),notes:z.string().trim().max(500),imageId:z.union([z.string().uuid(),z.literal('')]).default('')
 });
 export type TransactionInput=z.infer<typeof transactionSchema>;
-export type Transaction=TransactionInput&{id:string};
+export type Transaction=TransactionInput&{id:string;createdAt?:string};
 export function totals(rows:TransactionInput[]){return rows.reduce((a,r)=>({pieces:a.pieces+r.quantity,revenue:a.revenue+r.quantity*r.price,cost:a.cost+r.quantity*r.cost,profit:a.profit+r.quantity*(r.price-r.cost)}),{pieces:0,revenue:0,cost:0,profit:0});}
 export function jakartaToday(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Jakarta',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}

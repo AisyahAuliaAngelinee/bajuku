@@ -63,3 +63,12 @@ test('history expires at exactly 30 days based on recorded activity time',()=>{
  assert.deepEqual(recentHistory([old,recent,row],now).map(r=>r.id),['recent','audit']);
  assert.equal(row.quantity,2);
 });
+
+import {latestStockPrice} from '../lib/inventory';
+test('stock prices use newest input rather than movement date and stay variant scoped',()=>{
+ const base={id:'old',date:'2026-12-01',product:'Kaos',variant:'M',quantity:5,direction:'in' as const,notes:'',price:100,cost:60,createdAt:'2026-11-01T00:00:00Z'};
+ const newer={...base,id:'new',date:'2026-10-01',price:150,cost:80,createdAt:'2026-11-08T00:00:00Z'};
+ assert.equal(latestStockPrice([base,newer],'kaos','m')?.price,150);
+ assert.equal(latestStockPrice([newer],'Kaos','L'),undefined);
+ assert.equal(inventorySummary([base,newer],[])[0].createdAt,newer.createdAt);
+});

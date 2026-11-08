@@ -93,3 +93,9 @@ Table loading states cover initial route fetches and refresh/mutation transition
 - The daily table displays invoice, product/variant badge, date, quantity, unit price, sales, payment and actions. The Detail action opens an Animate UI dialog including cost, total cost, gross profit, notes and image.
 - Excel/PDF exports are generated from the authenticated owner's filtered transactions, then stored as immutable binary files in `download_history` (migration 004, initialized on first use). Download History lists metadata and downloads the original bytes with owner-scoped authorization. Activity log retention does not remove export archives.
 - Demo archives use IndexedDB in the current browser and survive navigation/reload until site storage is cleared. Production archives are account-backed.
+
+### Stock pricing and loading
+- The persistent workspace shell sits above route loading boundaries, keeping navigation visible while tables load.
+- Tables default to latest input time (`createdAt`), independent of the selected business date. Stock groups use the newest source input timestamp.
+- Incoming stock captures selling price and cost per piece. New sales use the most recently entered stock record for the selected product/variant; the server derives both prices again on save. Quantity multiplies the unit selling price. Existing sales retain their historical prices.
+- Migration 005 adds nullable prices for existing stock. Complete those fields before creating sales for legacy products. No historical prices are guessed.
