@@ -72,3 +72,12 @@ test('stock prices use newest input rather than movement date and stay variant s
  assert.equal(latestStockPrice([newer],'Kaos','L'),undefined);
  assert.equal(inventorySummary([base,newer],[])[0].createdAt,newer.createdAt);
 });
+
+test('remaining stock carries into following days without duplicate incoming records',()=>{
+ const stock=[{id:'first',date:'2026-11-07',product:'Kaos',variant:'M',quantity:10,direction:'in' as const,notes:''},{id:'next',date:'2026-11-09',product:'Kaos',variant:'M',quantity:5,direction:'in' as const,notes:''}];
+ const sold={...sale,date:'2026-11-07',quantity:3};
+ assert.equal(inventorySummary(stock,[sold],'2026-11-07')[0].balance,7);
+ assert.equal(inventorySummary(stock,[sold],'2026-11-08')[0].balance,7);
+ assert.equal(inventorySummary(stock,[sold],'2026-11-09')[0].balance,12);
+ assert.equal(stock.length,2);
+});
