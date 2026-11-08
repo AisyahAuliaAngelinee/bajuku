@@ -1,0 +1,5 @@
+export type DownloadEntry={id:string;filename:string;format:'xlsx'|'pdf';count:number;createdAt:string;period:string;search:string;size:number};
+export type DemoDownload=DownloadEntry&{blob:Blob};
+function openDemoDb():Promise<IDBDatabase>{return new Promise((resolve,reject)=>{const request=indexedDB.open('bajuku-demo-downloads',1);request.onupgradeneeded=()=>request.result.createObjectStore('files',{keyPath:'id'});request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error)})}
+export async function saveDemoDownload(entry:DemoDownload){const db=await openDemoDb();return new Promise<void>((resolve,reject)=>{const tx=db.transaction('files','readwrite');tx.objectStore('files').put(entry);tx.oncomplete=()=>{db.close();resolve()};tx.onerror=()=>{db.close();reject(tx.error)}})}
+export async function listDemoDownloads():Promise<DemoDownload[]>{const db=await openDemoDb();return new Promise((resolve,reject)=>{const tx=db.transaction('files','readonly'),req=tx.objectStore('files').getAll();req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error);tx.oncomplete=()=>db.close()})}

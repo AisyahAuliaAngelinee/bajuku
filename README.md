@@ -88,3 +88,8 @@ Data-column headers toggle ascending/descending sorting in the sales, stock bala
 Migration 003 is guarded by the shared migration advisory lock and runs once on the first database read/write after deployment (or via `npm run db:migrate`). Its SQL is mirrored in `lib/history-schema.ts` for the server runtime. History older than 30 days is excluded and physically deleted on history reads. Vercel runs an additional fixed expiry sweep daily at 00:00 UTC through `/api/cron/history-cleanup`. This idempotent endpoint accepts no scope/cutoff parameters and returns no user data. Quiet-account physical deletion may wait until the daily sweep; old rows are never returned by the history page.
 
 Table loading states cover initial route fetches and refresh/mutation transitions. Stock summary edit/delete controls open the underlying incoming-stock and sales records so aggregates are not overwritten ambiguously.
+
+### Transaction detail and download archive
+- The daily table displays invoice, product/variant badge, date, quantity, unit price, sales, payment and actions. The Detail action opens an Animate UI dialog including cost, total cost, gross profit, notes and image.
+- Excel/PDF exports are generated from the authenticated owner's filtered transactions, then stored as immutable binary files in `download_history` (migration 004, initialized on first use). Download History lists metadata and downloads the original bytes with owner-scoped authorization. Activity log retention does not remove export archives.
+- Demo archives use IndexedDB in the current browser and survive navigation/reload until site storage is cleared. Production archives are account-backed.

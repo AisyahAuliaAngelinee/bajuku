@@ -84,15 +84,23 @@ export async function buildPdf(rows: Transaction[], context: ExportContext) {
   return doc;
 }
 
-export async function downloadBookkeeping(format: 'xlsx' | 'pdf', rows: Transaction[], context: ExportContext) {
+export async function createBookkeepingFile(format: 'xlsx' | 'pdf', rows: Transaction[], context: ExportContext) {
   let blob: Blob;
   if (format === 'xlsx') {
     const workbook = await buildWorkbook(rows, context);
     const bytes = await workbook.xlsx.writeBuffer();
     blob = new Blob([new Uint8Array(bytes)], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   } else blob = (await buildPdf(rows, context)).output('blob');
-  const url = URL.createObjectURL(blob), link = document.createElement('a');
-  link.href = url; link.download = `${filename(context.date)}.${format}`;
-  document.body.appendChild(link); link.click(); link.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return {blob,filename:`${filename(context.date)}.${format}`};
 }
+
+export function saveBlob(blob:Blob, filename:string){
+ const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
+}
+export async function downloadBookkeeping(format:'xlsx'|'pdf',rows:Transaction[],context:ExportContext,demo=false,sort?:{key:string;direction:'asc'|'desc'}){
+ if(demo){const file=await createBookkeepingFile(format,rows,context);const {saveDemoDownload}=await import('./downloads');await saveDemoDownload({id:crypto.randomUUID(),filename:file.filename,format,count:rows.length,createdAt:new Date().toISOString(),period:context.date||'Semua tanggal',search:context.search,size:file.blob.size,blob:file.blob});saveBlob(file.blob,file.filename);return;}
+ const response=await fetch('/api/downloads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({format,date:context.date,search:context.search,sort})});
+ const result=await response.json();if(!response.ok)throw Error(result.error||'Unduhan gagal');
+ await redownload(result.id,result.filename);
+}
+export async function redownload(id:string,filename:string){const response=await fetch(`/api/downloads/${id}`);if(!response.ok)throw Error('File gagal diunduh');saveBlob(await response.blob(),filename);}
