@@ -29,7 +29,7 @@ export function Select({value,onValueChange,options,label,disabled=false}: {
   value:string; onValueChange:(value:string)=>void; label:string; disabled?:boolean;
   options:readonly {value:string;label:string}[];
 }) {
-  return <PrimitiveSelect.Root value={value} onValueChange={onValueChange} disabled={disabled}>
+  return <PrimitiveSelect.Root value={value} onValueChange={next=>{if(options.some(option=>option.value===next))onValueChange(next)}} disabled={disabled}>
     <PrimitiveSelect.Trigger className="select-trigger" aria-label={label}>
       <PrimitiveSelect.Value/><PrimitiveSelect.Icon><ChevronDown size={16}/></PrimitiveSelect.Icon>
     </PrimitiveSelect.Trigger>
