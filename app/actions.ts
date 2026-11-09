@@ -17,3 +17,9 @@ export async function removeStock(id:string){const session=await auth();if(!sess
 export async function previewInvoice(product:string,variant:string){const session=await auth();if(!session?.user?.id)return{error:'Silakan login kembali.'};if(product.length>120||variant.length>80)return{error:'Produk tidak valid.'};try{const stock=await listStock(session.user.id);if(!stock.some(r=>r.direction==='in'&&productKey(r.product,r.variant)===productKey(product,variant)))return{error:'Pilih produk dan varian dari barang masuk.'};const invoice=await reserveInvoice(session.user.id,product,variant);return{invoice,proof:signInvoice(session.user.id,product,variant,invoice)};}catch{return{error:'Preview nota tidak tersedia atau nomor varian telah mencapai 999.'};}}
 
 export async function removeHistory(id:string){const session=await auth();if(!session?.user?.id)return{error:'Silakan login kembali.'};if(!z.uuid().safeParse(id).success)return{error:'ID riwayat tidak valid.'};try{await deleteHistory(session.user.id,id);revalidatePath('/transaction-history');return{ok:true};}catch{return{error:'Riwayat gagal dihapus.'}}}
+
+export async function mutateTrash(input:unknown,restore=false){
+ const session=await auth();if(!session?.user?.id)return{error:'Silakan login kembali.'};
+ const parsed=z.array(z.object({source:z.enum(['sale','stock','download']),id:z.uuid()})).min(1).max(500).safeParse(input);if(!parsed.success)return{error:'Pilih maksimal 500 catatan yang valid.'};
+ try{const {changeTrash}=await import('@/lib/db');await changeTrash(session.user.id,parsed.data,restore);revalidatePath('/');revalidatePath('/transaction-history');revalidatePath('/download-history');return{ok:true}}catch{return{error:'Data berubah atau gagal diproses. Muat ulang dan coba lagi.'}}
+}
