@@ -1,0 +1,30 @@
+import type {Transaction} from './transactions';
+export function chartDays(rows:Transaction[]){
+ const days=new Map<string,{date:string;revenue:number;cost:number}>();
+ for(const r of rows){const day=days.get(r.date)||{date:r.date,revenue:0,cost:0};day.revenue+=r.price*r.quantity;day.cost+=r.cost*r.quantity;days.set(r.date,day)}
+ return [...days.values()].sort((a,b)=>a.date.localeCompare(b.date));
+}
+const xml=(s:string)=>s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const ns='http://schemas.openxmlformats.org';
+const title=(text:string)=>`<c:title><c:tx><c:rich><a:bodyPr/><a:lstStyle/><a:p><a:r><a:rPr lang="id-ID" sz="1200"/><a:t>${xml(text)}</a:t></a:r></a:p></c:rich></c:tx><c:overlay val="0"/></c:title>`;
+function chart(kind:'line'|'bar',days:ReturnType<typeof chartDays>){
+ const count=days.length,end=5+count;
+ const series=[['Harga total','B','245D48','revenue'],['Total modal','C','B14F49','cost']] as const;
+ const ser=series.map(([label,col,color,key],i)=>`<c:ser><c:idx val="${i}"/><c:order val="${i}"/><c:tx><c:strRef><c:f>'Grafik'!$${col}$5</c:f><c:strCache><c:ptCount val="1"/><c:pt idx="0"><c:v>${label}</c:v></c:pt></c:strCache></c:strRef></c:tx><c:spPr>${kind==='bar'?`<a:solidFill><a:srgbClr val="${color}"/></a:solidFill>`:''}<a:ln w="25400"><a:solidFill><a:srgbClr val="${color}"/></a:solidFill></a:ln></c:spPr>${kind==='line'?'<c:marker><c:symbol val="circle"/><c:size val="5"/></c:marker>':''}<c:cat><c:strRef><c:f>'Grafik'!$A$6:$A$${Math.max(6,end)}</c:f><c:strCache><c:ptCount val="${count}"/>${days.map((d,j)=>`<c:pt idx="${j}"><c:v>${d.date}</c:v></c:pt>`).join('')}</c:strCache></c:strRef></c:cat><c:val><c:numRef><c:f>'Grafik'!$${col}$6:$${col}$${Math.max(6,end)}</c:f><c:numCache><c:formatCode>#,##0</c:formatCode><c:ptCount val="${count}"/>${days.map((d,j)=>`<c:pt idx="${j}"><c:v>${d[key]}</c:v></c:pt>`).join('')}</c:numCache></c:numRef></c:val>${kind==='line'?'<c:smooth val="0"/>':''}</c:ser>`).join('');
+ return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><c:chartSpace xmlns:c="${ns}/drawingml/2006/chart" xmlns:a="${ns}/drawingml/2006/main" xmlns:r="${ns}/officeDocument/2006/relationships"><c:lang val="id-ID"/><c:chart>${title(kind==='line'?'Tren penjualan harian (Rp)':'Perbandingan penjualan dan modal (Rp)')}<c:plotArea><c:layout/><c:${kind}Chart>${kind==='bar'?'<c:barDir val="col"/><c:grouping val="clustered"/>':'<c:grouping val="standard"/>'}<c:varyColors val="0"/>${ser}${kind==='bar'?'<c:gapWidth val="150"/>':''}<c:axId val="10"/><c:axId val="20"/></c:${kind}Chart><c:catAx><c:axId val="10"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="b"/><c:tickLblPos val="nextTo"/><c:crossAx val="20"/><c:crosses val="autoZero"/><c:auto val="1"/><c:lblAlgn val="ctr"/><c:lblOffset val="100"/></c:catAx><c:valAx><c:axId val="20"/><c:scaling><c:orientation val="minMax"/></c:scaling><c:delete val="0"/><c:axPos val="l"/><c:majorGridlines/><c:numFmt formatCode="#,##0" sourceLinked="0"/><c:tickLblPos val="nextTo"/><c:crossAx val="10"/><c:crosses val="autoZero"/><c:crossBetween val="between"/></c:valAx></c:plotArea><c:legend><c:legendPos val="b"/><c:layout/><c:overlay val="0"/></c:legend><c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/></c:chart></c:chartSpace>`;
+}
+// ExcelJS preserves cell formatting but has no chart writer. Add native OOXML charts
+// to its finished package so Excel can edit and recalculate the series normally.
+export async function addExcelCharts(bytes:Uint8Array,rows:Transaction[]){
+ const {default:JSZip}=await import('jszip');const zip=await JSZip.loadAsync(bytes),days=chartDays(rows);
+ const rel=(id:string,type:string,target:string)=>`<Relationship Id="${id}" Type="${ns}/officeDocument/2006/relationships/${type}" Target="${target}"/>`;
+ const rels=(body:string)=>`<?xml version="1.0" encoding="UTF-8"?><Relationships xmlns="${ns}/package/2006/relationships">${body}</Relationships>`;
+ zip.file('xl/charts/chart1.xml',chart('line',days));zip.file('xl/charts/chart2.xml',chart('bar',days));
+ zip.file('xl/drawings/_rels/drawing1.xml.rels',rels(rel('rId1','chart','../charts/chart1.xml')+rel('rId2','chart','../charts/chart2.xml')));
+ const anchor=(id:number,row:number)=>`<xdr:twoCellAnchor><xdr:from><xdr:col>4</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:from><xdr:to><xdr:col>15</xdr:col><xdr:colOff>0</xdr:colOff><xdr:row>${row+19}</xdr:row><xdr:rowOff>0</xdr:rowOff></xdr:to><xdr:graphicFrame macro=""><xdr:nvGraphicFramePr><xdr:cNvPr id="${id}" name="Chart ${id}"/><xdr:cNvGraphicFramePr/></xdr:nvGraphicFramePr><xdr:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></xdr:xfrm><a:graphic><a:graphicData uri="${ns}/drawingml/2006/chart"><c:chart xmlns:c="${ns}/drawingml/2006/chart" r:id="rId${id}"/></a:graphicData></a:graphic></xdr:graphicFrame><xdr:clientData/></xdr:twoCellAnchor>`;
+ zip.file('xl/drawings/drawing1.xml',`<?xml version="1.0" encoding="UTF-8"?><xdr:wsDr xmlns:xdr="${ns}/drawingml/2006/spreadsheetDrawing" xmlns:a="${ns}/drawingml/2006/main" xmlns:r="${ns}/officeDocument/2006/relationships">${anchor(1,4)}${anchor(2,25)}</xdr:wsDr>`);
+ zip.file('xl/worksheets/_rels/sheet2.xml.rels',rels(rel('rIdCharts','drawing','../drawings/drawing1.xml')));
+ const sheet=await zip.file('xl/worksheets/sheet2.xml')!.async('string');zip.file('xl/worksheets/sheet2.xml',sheet.replace('</worksheet>','<drawing r:id="rIdCharts"/></worksheet>'));
+ const types=await zip.file('[Content_Types].xml')!.async('string');zip.file('[Content_Types].xml',types.replace('</Types>',`<Override PartName="/xl/drawings/drawing1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawing+xml"/><Override PartName="/xl/charts/chart1.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/><Override PartName="/xl/charts/chart2.xml" ContentType="application/vnd.openxmlformats-officedocument.drawingml.chart+xml"/></Types>`));
+ return zip.generateAsync({type:'uint8array',compression:'DEFLATE'});
+}

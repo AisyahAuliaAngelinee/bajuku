@@ -118,3 +118,5 @@ html,body{width:100%;max-width:100%;overflow-x:clip}
 @media(max-width:600px){.pagination{padding:12px;gap:10px;font-size:11px}.page-buttons{margin-left:auto}.heading .heading-subtitle{font-size:15px}}
 
 @media(max-width:600px){.topbar>span:first-child{display:none}}
+
+.stock-outgoing{color:#b14f49;font-weight:600}

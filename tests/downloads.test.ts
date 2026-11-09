@@ -12,3 +12,17 @@ test('archived Excel retains original values after the source changes',async()=>
 test('PDF archive is a valid binary document, including an empty filtered export',async()=>{
  const file=await createBookkeepingFile('pdf',[],{name:'Demo',date:'',search:'Tidak ada'});const bytes=new Uint8Array(await file.blob.arrayBuffer());assert.equal(new TextDecoder().decode(bytes.slice(0,5)),'%PDF-');assert.equal(file.blob.type,'application/pdf');assert.equal(file.filename,'Baju-Thieo-Pembukuan-semua-tanggal.pdf');
 });
+test('Excel exports bordered tables and two native charts with daily totals',async()=>{
+ const file=await createBookkeepingFile('xlsx',[row,{...row,id:'second',quantity:1}],{name:'Demo',date:'',search:''});
+ const bytes=await file.blob.arrayBuffer();const {default:ExcelJS}=await import('exceljs');const book=new ExcelJS.Workbook();await book.xlsx.load(bytes);
+ const sheet=book.getWorksheet('Transaksi')!,graph=book.getWorksheet('Grafik')!;
+ assert.equal(sheet.getCell('A7').border.left?.style,'thin');assert.equal(sheet.getCell('K9').border.top?.style,'medium');
+ assert.equal(graph.getCell('B6').result,360000);assert.equal(graph.getCell('C6').result,225000);assert.match(graph.getCell('B6').formula,/SUMIF/);
+ const {default:JSZip}=await import('jszip');const zip=await JSZip.loadAsync(bytes);
+ for(const [n,kind] of [[1,'line'],[2,'bar']] as const){const chart=await zip.file(`xl/charts/chart${n}.xml`)!.async('string');assert.match(chart,new RegExp(`<c:${kind}Chart>`));assert.match(chart,/<c:legendPos val="b"/);assert.match(chart,/<c:v>360000<\/c:v>/);assert.match(chart,/<c:v>225000<\/c:v>/);}
+ assert.match(await zip.file('xl/worksheets/sheet2.xml')!.async('string'),/drawing r:id="rIdCharts"/);
+});
+test('empty Excel chart export has no fabricated sales points',async()=>{
+ const file=await createBookkeepingFile('xlsx',[],{name:'Demo',date:'',search:''});const {default:JSZip}=await import('jszip');const zip=await JSZip.loadAsync(await file.blob.arrayBuffer());
+ assert.match(await zip.file('xl/charts/chart1.xml')!.async('string'),/<c:ptCount val="0"/);
+});

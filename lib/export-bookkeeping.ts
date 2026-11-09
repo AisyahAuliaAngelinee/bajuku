@@ -1,3 +1,4 @@
+import {chartDays,addExcelCharts} from './excel-charts';
 import {browserTimeZone,localTimestamp} from './local-time';
 import type {Transaction} from './transactions';
 
@@ -51,6 +52,19 @@ export async function buildWorkbook(rows: Transaction[], context: ExportContext)
   sheet.addRow(['Profit belum termasuk ongkir, biaya admin, dan operasional.']);
   sheet.mergeCells(`A${sheet.rowCount}:K${sheet.rowCount}`);
   sheet.pageSetup = {orientation: 'landscape', paperSize: 9, fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: '1:6'};
+  const border={style:'thin' as const,color:{argb:'FFD5DDD5'}};
+  for(let r=6;r<=total.number;r++)for(let c=1;c<=11;c++)sheet.getCell(r,c).border={top:r===total.number?{style:'medium',color:{argb:'FF245D48'}}:border,bottom:border,left:border,right:border};
+  const graph=workbook.addWorksheet('Grafik');graph.columns=[{width:17},{width:23},{width:23},...Array.from({length:12},()=>({width:10}))];
+  graph.mergeCells('A1:O1');graph.getCell('A1').value='Grafik penjualan harian';graph.getCell('A1').font={size:18,bold:true,color:{argb:'FF245D48'}};
+  graph.mergeCells('A2:O2');graph.getCell('A2').value=`Periode: ${period(context.date)} · Filter: ${context.search||'Semua transaksi'}`;
+  graph.mergeCells('A3:O3');graph.getCell('A3').value='Sumber: transaksi sesuai filter unduhan. Nilai dalam rupiah.';
+  graph.getRow(5).values=['Tanggal','Harga total (Rp)','Total modal (Rp)'];
+  chartDays(rows).forEach((day,i)=>{const r=i+6;graph.getRow(r).values=[day.date,{formula:`SUMIF(Transaksi!$A$7:$A$${Math.max(7,end)},A${r},Transaksi!$H$7:$H$${Math.max(7,end)})`,result:day.revenue},{formula:`SUMIF(Transaksi!$A$7:$A$${Math.max(7,end)},A${r},Transaksi!$I$7:$I$${Math.max(7,end)})`,result:day.cost}];});
+  for(let r=5;r<=Math.max(5,graph.rowCount);r++)for(let c=1;c<=3;c++)graph.getCell(r,c).border={top:border,bottom:border,left:border,right:border};
+  graph.getRow(5).font={bold:true,color:{argb:'FFFFFFFF'}};graph.getRow(5).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF245D48'}};graph.getRow(5).height=26;
+  graph.getColumn(2).numFmt='#,##0';graph.getColumn(3).numFmt='#,##0';graph.views=[{state:'frozen',ySplit:5,showGridLines:false}];
+  if(!rows.length){graph.getCell('E5').value='Belum ada transaksi sesuai filter.';}
+  workbook.calcProperties.fullCalcOnLoad=true;
   return workbook;
 }
 
@@ -71,7 +85,8 @@ export async function buildPdf(rows: Transaction[], context: ExportContext) {
     head: [['Tanggal', 'Produk / varian / nota / catatan', 'Qty', 'Harga/pcs\n(Rp)', 'Modal/pcs\n(Rp)', 'Harga total\n(Rp)', 'Total modal\n(Rp)', 'Pembayaran']],
     body: rows.length ? rows.map(r => [period(r.date), [r.product, r.variant, r.invoice && `Nota: ${r.invoice}`, r.notes && `Catatan: ${r.notes}`].filter(Boolean).join('\n'), money(r.quantity), money(r.price), money(r.cost), money(r.price*r.quantity), money(r.cost*r.quantity), r.payment]) : [['Tidak ada transaksi sesuai filter.', '', '', '', '', '', '', '']],
     foot: [['TOTAL', '', money(sums.pieces), '', '', money(sums.revenue), money(sums.cost), '']],
-    showFoot: 'lastPage', styles: {fontSize: 7, cellPadding: 2, overflow: 'linebreak'},
+    theme:'grid',tableLineColor:[151,169,155],tableLineWidth:0.25,
+    showFoot: 'lastPage', styles: {lineColor:[203,213,204],lineWidth:0.15,fontSize: 7, cellPadding: 2, overflow: 'linebreak'},
     headStyles: {fillColor: [36,93,72]}, footStyles: {fillColor: [220,233,219], textColor: [25,45,40]},
     alternateRowStyles: {fillColor: [245,248,242]},
     columnStyles: {0: {cellWidth:21}, 1: {cellWidth:57}, 2:{halign:'right'}, 3:{halign:'right'}, 4:{halign:'right'}, 5:{halign:'right'}, 6:{halign:'right'}, 7:{cellWidth:24}},
@@ -89,7 +104,7 @@ export async function createBookkeepingFile(format: 'xlsx' | 'pdf', rows: Transa
   let blob: Blob;
   if (format === 'xlsx') {
     const workbook = await buildWorkbook(rows, context);
-    const bytes = await workbook.xlsx.writeBuffer();
+    const bytes = await addExcelCharts(new Uint8Array(await workbook.xlsx.writeBuffer()),rows);
     blob = new Blob([new Uint8Array(bytes)], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   } else blob = (await buildPdf(rows, context)).output('blob');
   return {blob,filename:`${filename(context.date)}.${format}`};

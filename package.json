@@ -25,7 +25,8 @@
     "exceljs": "4.4.0",
     "jspdf": "3.0.4",
     "jspdf-autotable": "5.0.2",
-    "recharts": "^3.8.0"
+    "recharts": "^3.8.0",
+    "jszip": "3.10.2"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
