@@ -81,3 +81,14 @@ test('remaining stock carries into following days without duplicate incoming rec
  assert.equal(inventorySummary(stock,[sold],'2026-11-09')[0].balance,12);
  assert.equal(stock.length,2);
 });
+
+import {groupProducts} from '../lib/inventory';
+import {greetingForHour} from '../lib/local-time';
+test('product grouping combines variants without losing stock counts or mixing products',()=>{
+ const input=[{id:'a',date:sale.date,product:'Kaos',variant:'M Hitam',quantity:5,direction:'in' as const,notes:''},{id:'b',date:sale.date,product:' kaos ',variant:'L Putih',quantity:8,direction:'in' as const,notes:''},{id:'c',date:sale.date,product:'Jaket',variant:'M',quantity:4,direction:'in' as const,notes:''}];
+ const grouped=groupProducts(inventorySummary(input,[{...sale,variant:'M Hitam'}]));
+ assert.equal(grouped.length,2);const kaos=grouped.find(g=>g.key==='kaos')!;assert.equal(kaos.variants.length,2);assert.equal(kaos.incoming,13);assert.equal(kaos.outgoing,2);assert.equal(kaos.balance,11);
+});
+test('greeting changes at local morning, noon, afternoon and night boundaries',()=>{
+ assert.equal(greetingForHour(4),'Selamat malam');assert.equal(greetingForHour(5),'Selamat pagi');assert.equal(greetingForHour(11),'Selamat siang');assert.equal(greetingForHour(15),'Selamat sore');assert.equal(greetingForHour(18),'Selamat malam');
+});

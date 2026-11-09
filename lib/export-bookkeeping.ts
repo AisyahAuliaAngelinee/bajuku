@@ -6,17 +6,17 @@ const money = (value: number) => new Intl.NumberFormat('id-ID', {maximumFraction
 const period = (date: string) => date ? date.split('-').reverse().join('/') : 'Semua tanggal';
 const generated = (timeZone=browserTimeZone()) => localTimestamp(new Date(),timeZone);
 const summary = (rows: Transaction[]) => rows.reduce((s, r) => ({pieces: s.pieces + r.quantity, revenue: s.revenue + r.quantity * r.price, cost: s.cost + r.quantity * r.cost, profit: s.profit + r.quantity * (r.price - r.cost)}), {pieces: 0, revenue: 0, cost: 0, profit: 0});
-const filename = (date: string) => `Bajuku-Pembukuan-${date || 'semua-tanggal'}`;
+const filename = (date: string) => `Baju-Thieo-Pembukuan-${date || 'semua-tanggal'}`;
 
 export async function buildWorkbook(rows: Transaction[], context: ExportContext) {
   const {default: ExcelJS} = await import('exceljs');
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Bajuku';
+  workbook.creator = 'Baju-Thieo';
   workbook.created = new Date();
   const sheet = workbook.addWorksheet('Transaksi');
   const headers = ['Tanggal', 'No. nota', 'Produk', 'Ukuran / warna', 'Jumlah (pcs)', 'Harga jual / pcs (Rp)', 'Modal / pcs (Rp)', 'Harga total (Rp)', 'Total modal (Rp)', 'Pembayaran', 'Catatan'];
   sheet.columns = [15, 20, 30, 22, 15, 23, 23, 23, 23, 20, 45].map(width => ({width}));
-  sheet.addRow(['BAJUKU — PEMBUKUAN PENJUALAN']);
+  sheet.addRow(['BAJU THIEO — PEMBUKUAN PENJUALAN']);
   sheet.mergeCells('A1:K1');
   sheet.getRow(1).font = {bold: true, size: 18, color: {argb: 'FF245D48'}};
   sheet.addRow([`Pemilik: ${context.name}`]);
@@ -58,7 +58,7 @@ export async function buildPdf(rows: Transaction[], context: ExportContext) {
   const [{jsPDF}, {default: autoTable}] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc = new jsPDF({orientation: 'landscape', unit: 'mm', format: 'a4'});
   doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(36,93,72);
-  doc.text('BAJUKU | Pembukuan penjualan', 12, 17);
+  doc.text('BAJU THIEO | Pembukuan penjualan', 12, 17);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(45); doc.setFontSize(9);
   const metadata = doc.splitTextToSize(`Pemilik: ${context.name}\nPeriode: ${period(context.date)} | Pencarian: ${context.search || 'Semua transaksi'}\nDibuat: ${generated(context.timeZone)}`, 270);
   doc.text(metadata, 12, 25);

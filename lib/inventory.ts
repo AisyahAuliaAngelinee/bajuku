@@ -13,3 +13,9 @@ export function inventorySummary(movements:StockMovement[],sales:Transaction[],a
 export function inventoryHistory(movements:StockMovement[],sales:Transaction[]){return [...movements.map(r=>({...r,source:'manual' as const})),...sales.map(r=>({id:r.id,date:r.date,product:r.product,variant:r.variant,quantity:r.quantity,direction:'out' as const,notes:r.invoice||'Penjualan',source:'sale' as const}))].sort((a,b)=>b.date.localeCompare(a.date));}
 
 export function latestStockPrice(stock:StockMovement[],product:string,variant:string){return stock.filter(r=>r.direction==='in'&&productKey(r.product,r.variant)===productKey(product,variant)).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''))[0]}
+
+export function groupProducts(rows:ReturnType<typeof inventorySummary>){
+ const groups=new Map<string,{key:string;product:string;variants:typeof rows;incoming:number;outgoing:number;balance:number}>();
+ for(const row of rows){const key=row.product.trim().toLocaleLowerCase('id-ID');const group=groups.get(key)||{key,product:row.product,variants:[],incoming:0,outgoing:0,balance:0};group.variants.push(row);group.incoming+=row.incoming;group.outgoing+=row.outgoing;group.balance+=row.balance;groups.set(key,group)}
+ return [...groups.values()];
+}
