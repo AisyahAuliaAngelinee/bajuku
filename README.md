@@ -1,105 +1,80 @@
-# Bajuku — Sprint 1
+# Baju Thieo — Bantu Kawan
 
-Webapp pembukuan penjualan baju. Next.js App Router, TypeScript, Auth.js Google, PostgreSQL.
+**Web Bantu Kawan dalam penginputan data** persediaan dan transaksi penjualan baju. Baju Thieo membantu kawan mencatat barang masuk, penjualan harian, harga dan modal, memantau stock, serta menyimpan laporan yang dapat diunduh kembali.
 
-## Fitur
+**Aplikasi:** https://bajuku-swart.vercel.app/ · **Demo:** https://bajuku-swart.vercel.app/demo
 
-- Login Google, logout, dan halaman transaksi yang memerlukan sesi.
-- Setiap akun hanya dapat membaca, mengedit, dan menghapus transaksinya sendiri. Identitas pemilik diambil dari sesi server, bukan input browser.
-- Tambah, edit, hapus transaksi. Satu baris untuk satu model/varian baju.
-- Tanggal, nomor nota, nama baju, ukuran/warna, jumlah pcs, harga jual/pcs, harga modal/pcs, pembayaran, catatan.
-- Total penjualan = jumlah × harga jual. Total modal = jumlah × harga modal. Laba kotor = penjualan − modal.
-- Filter tanggal Jakarta, pencarian produk/nota/varian, dan ringkasan berdasarkan hasil filter.
-- `/demo` memakai data contoh di memori browser. Tidak menulis ke database; perubahan hilang saat reload.
+## Status sprint
+
+Sprint 1 beserta seluruh iterasi permintaan sampai 10 November 2026 telah diimplementasikan dan dipublikasikan. Tahap berikut merupakan pengelompokan pekerjaan dalam Sprint 1, bukan nomor sprint baru. Catatan perubahan lengkap, revisi yang menggantikan permintaan lama, dan batas implementasi tersedia di [rekap sprint](docs/SPRINTS.md).
+
+| Tahap | Lingkup yang diselesaikan |
+| --- | --- |
+| 1. Fondasi dan mobile | Perbaikan bleeding/overflow, ukuran tombol mobile, menu ikon di sebelah logo, AnimateUI, GitHub dan Vercel, login Google dan database |
+| 2. Persediaan | Barang masuk di bawah grafik; barang keluar dari transaksi; stock kumulatif lintas hari; harga/modal per pcs; gambar opsional; edit/delete catatan |
+| 3. Transaksi | Model dan varian dari barang masuk; harga otomatis; qty × harga; preview nota otomatis; detail dialog; badge varian; kolom ringkas; sort terbaru |
+| 4. Navigasi dan identitas | Baju Thieo, sapaan waktu lokal dan nama, subjudul, foto Google, sidebar mengikuti urutan fitur, timezone perangkat |
+| 5. Tabel dan grafik | Sort kolom data, pagination 5/15/25/50, scroll body setelah 5 baris, grouping lipat/edit, search konsisten, toggle periode grafik |
+| 6. Laporan | PDF/Excel dengan border, sheet Grafik dengan line/bar chart dan legenda, Download History dengan unduh ulang |
+| 7. History | Hapus sementara, checkbox dan floating menu, filter jenis, restore, hapus permanen terpilih, retensi 30 hari |
+| 8. Pengalaman penggunaan | Skeleton per kartu/tabel/grafik tanpa menghilangkan sidebar, Alert harga, textarea catatan, indikator stock berwarna, footer kosong disembunyikan, toast global AnimateUI |
+
+## Cara menggunakan
+
+1. Login dengan Google, lalu **Catat barang masuk**: produk, varian ukuran/warna, jumlah, harga jual, modal, serta catatan/gambar opsional.
+2. Di **Transaksi harian**, pilih **Catat transaksi**. Model dan varian berasal dari barang masuk; harga terisi otomatis. Periksa preview nota dan total, lalu simpan.
+3. Barang keluar dan total stock dihitung ulang. Sisa stock tetap tersedia pada hari berikutnya tanpa input ulang.
+4. Gunakan detail/edit, pencarian, sort, pagination, dan grup produk untuk mengelola catatan.
+5. Ekspor Excel/PDF dari transaksi yang difilter. File asli tersedia di **Download History**.
+6. Hapus sementara untuk memindahkan data ke **History**. Restore tersedia selama 30 hari; hapus permanen memerlukan konfirmasi dalam aplikasi.
+
+## Perilaku penting
+
+- **Total stock = barang masuk aktif − jumlah transaksi aktif**, kumulatif sampai tanggal lokal hari ini. Stock negatif masih dimungkinkan; peringatan meminta rekonsiliasi.
+- Kartu total stock memakai angka absolut dan ikon: positif hijau, nol netral, negatif merah. Ini menunjukkan tanda saldo saat ini, bukan persentase perubahan terhadap hari sebelumnya. Tabel tetap menampilkan saldo akhir bertanda.
+- **Harga total = qty × harga jual/pcs**. Harga/modal transaksi baru diturunkan kembali di server dari input barang masuk terbaru untuk varian tersebut.
+- **Profit = penjualan − modal barang terjual**. Belum dikurangi ongkir, biaya admin, dan operasional; bukan laba bersih akuntansi penuh.
+- History saat ini adalah tempat data yang dihapus sementara, **bukan audit log semua aktivitas**. Arsip download aktif tidak kedaluwarsa; arsip yang dihapus mengikuti retensi History.
+- Demo: transaksi/stock/History memakai `sessionStorage`; arsip file memakai IndexedDB. Reload dalam sesi yang sama mempertahankan data demo. Demo tidak menulis ke database produksi.
+- UI memakai primitive AnimateUI; Alert mengikuti komposisi shadcn. Input dan tabel memakai HTML semantik, grafik menggunakan Recharts.
+
+## Dokumentasi
+
+| Dokumen | Isi |
+| --- | --- |
+| [Rekap seluruh sprint/permintaan](docs/SPRINTS.md) | Pemetaan permintaan, hasil akhir, perubahan keputusan |
+| [Use case](docs/USE_CASES.md) | Aktor, tujuan, prasyarat, skenario dan kegagalan |
+| [Activity dan sequence](docs/ACTIVITY.md) | Alur penginputan, transaksi, History, ekspor, autentikasi |
+| [Database dan ERD](docs/DATABASE.md) | Tabel, relasi aktual, kamus data, migrasi dan retensi |
+| [Arsitektur dan kontrak](docs/ARCHITECTURE.md) | Komponen, route, server actions, isolasi akun dan rumus |
+| [Operasional dan pengujian](docs/OPERATIONS.md) | Setup, OAuth, deploy, verifikasi dan troubleshooting |
+
+Diagram Mermaid dapat dibaca langsung di GitHub.
+
+## Teknologi
+
+Next.js App Router · React · TypeScript · Auth.js + Google OAuth · PostgreSQL (`pg`) · AnimateUI + Base UI/Radix · Motion · Recharts · ExcelJS + JSZip · jsPDF + AutoTable · Vercel.
 
 ## Jalankan lokal
 
-Gunakan Node.js 22.13 atau lebih baru.
+Gunakan Node.js 22.13+ yang kompatibel dengan versi dependency terkunci.
 
 ```sh
-npm install
+npm ci
 cp .env.example .env.local
-```
-
-Isi `.env.local` di perangkat sendiri (jangan bagikan secret lewat chat):
-
-| Variabel | Isi |
-|---|---|
-| AUTH_SECRET | String acak minimal 32 byte, buat dengan `openssl rand -base64 32` |
-| AUTH_GOOGLE_ID | Client ID Google OAuth tipe Web application |
-| AUTH_GOOGLE_SECRET | Client Secret Google OAuth |
-| AUTH_URL | `http://localhost:3000` untuk lokal, URL HTTPS aplikasi untuk produksi |
-| DATABASE_URL | Connection string PostgreSQL; gunakan konfigurasi TLS dari penyedia database |
-
-Google Cloud: konfigurasikan OAuth consent screen dan buat OAuth client **Web application**. Tambahkan redirect URI `http://localhost:3000/api/auth/callback/google`. Untuk produksi tambahkan `https://DOMAIN-APLIKASI/api/auth/callback/google`. Jika OAuth app masih Testing, tambahkan akun yang akan masuk sebagai test user. Scope hanya identitas dasar Google (openid, email, profile).
-
-```sh
+# Isi environment sesuai docs/OPERATIONS.md
 npm run db:migrate
 npm run dev
 ```
 
-Buka `http://localhost:3000`. Demo bisa dibuka di `/demo` tanpa database atau Google credential.
-
-## Verifikasi
+Buka `http://localhost:3000`; `/demo` dapat dipakai tanpa credential Google/database. Jangan commit `.env.local` atau secret.
 
 ```sh
-npm test
+node --import tsx --test tests/*.test.ts
 npm run typecheck
-npm run build
+npm run build -- --webpack
 ```
 
-Sebelum produksi: login dengan dua akun berbeda, buat transaksi di masing-masing akun, pastikan data terpisah; uji tambah/edit/hapus, reload, logout, dan akses halaman tanpa sesi.
+## Publikasi
 
-## Deploy
-
-Gunakan hosting Node.js yang mendukung Next.js serta PostgreSQL. Set seluruh environment variable di pengaturan secret hosting. Jalankan migrasi sekali sebelum aplikasi menerima transaksi. Build dengan `npm run build`, start dengan `npm run start`. Daftarkan URL callback produksi persis seperti domain hosting. Source ini tidak memakai autentikasi atau hosting Sites.
-
-## Sprint 1: responsive UI dan produksi
-
-- Layout mobile memakai grid yang dapat menyusut, form satu kolom, tombol minimal 44 px, dan tabel dengan scroll horizontal di dalam kontainernya.
-- Tombol lipat sidebar berupa ikon di sebelah logo; navigasi mobile tersedia melalui drawer dengan focus management.
-- Button, Dialog/Sheet, Alert Dialog, Select, dan animasi status menggunakan primitive resmi `@animate-ui/react`. Input tanggal/angka/file dan tabel tetap elemen semantik; grafik memakai Recharts karena bukan komponen Animate UI.
-- Grafik harian/mingguan/bulanan/tahunan/custom, ekspor Excel/PDF, stok manual dan pengurangan stok dari transaksi.
-- Nomor nota otomatis per akun, dibuat secara atomik di PostgreSQL.
-- Gambar JPG/PNG/WebP maksimal 3 MB pada produksi agar sesuai batas request Vercel; akses gambar memerlukan sesi pemilik.
-- Jalankan kedua migrasi dengan `npm run db:migrate` sebelum menerima transaksi. Migrasi bersifat aditif dan dicatat dalam `schema_migrations`.
-- Build produksi dan pemeriksaan TypeScript lulus. Lima pengujian rumus/validasi, agregasi grafik, serta rekonsiliasi stok lulus.
-
-Google OAuth produksi: gunakan `AUTH_URL=https://bajuku-swart.vercel.app` dan redirect URI `https://bajuku-swart.vercel.app/api/auth/callback/google`. Simpan secret hanya pada environment hosting. Aktivasi nyata perlu diverifikasi lewat login dan penyimpanan pada deployment.
-
-## Referensi konfigurasi
-
-- https://animate-ui.com/docs/react
-- https://authjs.dev/getting-started/providers/google
-- https://authjs.dev/getting-started/deployment
-
-### Catalog, invoice previews, and table sorting
-
-New transactions select a product and variant from incoming stock. Historical transactions may keep their original product/variant while being edited. Google session images are displayed in the account area with an initials fallback. Chart periods use Animate UI Toggle Group.
-
-Invoice previews reserve a number atomically per account and generated model/size/color prefix, e.g. `ECT-L-HITAM-001`. Size is detected from slash-separated variants in either `L / Hitam` or `Hitam / L` order; missing size/color use `OS`/`NA`. The sequence is 001–999 per prefix; reaching 999 returns an explicit error. Existing invoice numbers remain immutable. Cancelled forms may leave gaps. A server signature binds the reserved number to the account and selected catalog entry; save verifies it and serializes duplicate checks. No schema migration is required.
-
-Data-column headers toggle ascending/descending sorting in the sales, stock balance, and movement history tables. Action columns are not sortable.
-
-### Transaction History and retention
-
-`/transaction-history` is an authenticated audit page; `/demo/transaction-history` uses session-scoped demo activity. Database triggers record create/update/delete events atomically with stock and sales writes. History deletion affects only the log, never the source transaction or stock balance. Existing source records from the last 30 days are backfilled once by migration 003.
-
-Migration 003 is guarded by the shared migration advisory lock and runs once on the first database read/write after deployment (or via `npm run db:migrate`). Its SQL is mirrored in `lib/history-schema.ts` for the server runtime. History older than 30 days is excluded and physically deleted on history reads. Vercel runs an additional fixed expiry sweep daily at 00:00 UTC through `/api/cron/history-cleanup`. This idempotent endpoint accepts no scope/cutoff parameters and returns no user data. Quiet-account physical deletion may wait until the daily sweep; old rows are never returned by the history page.
-
-Table loading states cover initial route fetches and refresh/mutation transitions. Stock summary edit/delete controls open the underlying incoming-stock and sales records so aggregates are not overwritten ambiguously.
-
-### Transaction detail and download archive
-- The daily table displays invoice, product/variant badge, date, quantity, unit price, sales, payment and actions. The Detail action opens an Animate UI dialog including cost, total cost, gross profit, notes and image.
-- Excel/PDF exports are generated from the authenticated owner's filtered transactions, then stored as immutable binary files in `download_history` (migration 004, initialized on first use). Download History lists metadata and downloads the original bytes with owner-scoped authorization. Activity log retention does not remove export archives.
-- Demo archives use IndexedDB in the current browser and survive navigation/reload until site storage is cleared. Production archives are account-backed.
-
-### Stock pricing and loading
-- The persistent workspace shell sits above route loading boundaries, keeping navigation visible while tables load.
-- Tables default to latest input time (`createdAt`), independent of the selected business date. Stock groups use the newest source input timestamp.
-- Incoming stock captures selling price and cost per piece. New sales use the most recently entered stock record for the selected product/variant; the server derives both prices again on save. Quantity multiplies the unit selling price. Existing sales retain their historical prices.
-- Migration 005 adds nullable prices for existing stock. Complete those fields before creating sales for legacy products. No historical prices are guessed.
-
-### Recoverable History
-All active source tables use nullable `deleted_at`. Temporary deletion keeps the complete original row (and file/image references), excludes it from calculations/catalog/downloads, and exposes it in History for 30 days. Restore clears `deleted_at` and preserves original identity, invoice, price, and creation time. Bulk changes are owner-scoped and atomic: stale or unavailable IDs roll back the whole selection. Stock-table group selections target incoming stock records; sales can be selected in the daily table or stock-detail dialog. History offers restore rather than recursively deleting history records.
-Migration 007 is applied idempotently through runtime schema guards as well as the migration runner. Legacy movement logging triggers stop; old logs are not sufficient to restore previously permanently deleted rows. The existing expiry cron now also purges soft-deleted originals after 30 days. Active download archives are never expired.
+Repository: [AisyahAuliaAngelinee/bajuku](https://github.com/AisyahAuliaAngelinee/bajuku). Push ke `main` memicu deployment Vercel; pastikan status deployment sukses. Konfigurasi environment, migrasi, OAuth callback, dan pemeriksaan pascadeploy dijelaskan di [operasional](docs/OPERATIONS.md).
