@@ -1,4 +1,5 @@
 'use client';
+import {notify,useFeedbackState} from './toaster';
 import {Children,cloneElement,isValidElement,useEffect,useRef,useState,useId,type ReactElement,type ReactNode} from 'react';
 import {Checkbox} from '@animate-ui/react/primitives/radix-ui/checkbox';
 import {Button,Select,AlertDialog} from './controls';
@@ -9,10 +10,10 @@ import {mutateTrash} from '../actions';
 export default function PaginatedTable({children,label,resetKey='',unit='baris',demo=false,trash=false}:{children:ReactNode;label:string;resetKey?:string;unit?:string;demo?:boolean;trash?:boolean}){
  const tableId=useId();
  useEffect(()=>{const clear=(event:Event)=>{if((event as CustomEvent).detail!==tableId)setChecked([])};window.addEventListener("baju-select-table",clear);return()=>window.removeEventListener("baju-select-table",clear)},[tableId]);
- const router=useRouter(),[checked,setChecked]=useState<string[]>([]),[busy,setBusy]=useState(false),[error,setError]=useState(''),[confirm,setConfirm]=useState(false);
+ const router=useRouter(),[checked,setChecked]=useState<string[]>([]),[busy,setBusy]=useState(false),[error,setError]=useFeedbackState('error'),[confirm,setConfirm]=useState(false);
  useEffect(()=>{setChecked([])},[resetKey]);
  function keys(node:ReactNode):string[]{return Children.toArray(node).flatMap(n=>{if(!isValidElement(n))return [];const p=n.props as {children?:ReactNode;'data-records'?:string;'data-record-label'?:string};return p['data-records']?p['data-records'].split(' ').filter(Boolean):keys(p.children)})}
- async function apply(permanent=false){setBusy(true);setError('');try{const records=selected.map(key=>{const [source,id]=key.split(':');return {source,id} as TrashRecord});if(demo){if(permanent)await permanentlyDeleteDemo(records);else await demoTrash(records,trash);}else{const result=await mutateTrash(records,trash,permanent);if(result.error)throw Error(result.error);router.refresh()}setChecked([]);setConfirm(false)}catch(e){setError(e instanceof Error?e.message:'Gagal memproses data.')}finally{setBusy(false)}}
+ async function apply(permanent=false){setBusy(true);setError('');try{const records=selected.map(key=>{const [source,id]=key.split(':');return {source,id} as TrashRecord});if(demo){if(permanent)await permanentlyDeleteDemo(records);else await demoTrash(records,trash);}else{const result=await mutateTrash(records,trash,permanent);if(result.error)throw Error(result.error);router.refresh()}notify(permanent?'Data terpilih dihapus permanen.':trash?'Data terpilih berhasil dipulihkan.':'Data terpilih dipindahkan ke History.');setChecked([]);setConfirm(false)}catch(e){setError(e instanceof Error?e.message:'Gagal memproses data.')}finally{setBusy(false)}}
 
  const [size,setSize]=useState(5),[selection,setSelection]=useState({key:resetKey,page:1});
  const sections=Children.toArray(children);const body=sections.find(el=>isValidElement(el)&&el.type==='tbody') as ReactElement<{children:ReactNode}>|undefined;
