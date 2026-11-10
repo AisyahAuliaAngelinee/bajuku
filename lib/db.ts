@@ -46,10 +46,10 @@ export async function listHistory(owner:string):Promise<HistoryEntry[]>{await pu
  UNION ALL SELECT id,id,'download','deleted',filename,format,transaction_count,'','', '',deleted_at FROM download_history WHERE owner_id=$1 AND deleted_at IS NOT NULL
  ORDER BY "occurredAt" DESC`,[owner])).rows.map(r=>({...r,occurredAt:new Date(r.occurredAt).toISOString()}))}
 export async function deleteHistory(owner:string,id:string){throw Error('Gunakan pemulihan History')}
-export async function changeTrash(owner:string,records:{source:'sale'|'stock'|'download';id:string}[],restore=false){
+export async function changeTrash(owner:string,records:{source:'sale'|'stock'|'download';id:string}[],restore=false,permanent=false){
  await ensureStockPrices();await ensureDownloadSchema();const c=await db().connect();try{await c.query('BEGIN');
  for(const source of ['sale','stock','download'] as const){const ids=[...new Set(records.filter(r=>r.source===source).map(r=>r.id))];if(!ids.length)continue;const table={sale:'transactions',stock:'stock_movements',download:'download_history'}[source];
- const result=await c.query(`UPDATE ${table} SET deleted_at=${restore?'NULL':'now()'} WHERE owner_id=$1 AND id=ANY($2::uuid[]) AND ${restore?"deleted_at>now()-interval '30 days'":'deleted_at IS NULL'} RETURNING id`,[owner,ids]);if(result.rowCount!==ids.length)throw Error('Data berubah atau tidak tersedia. Muat ulang halaman.');}
+ const result=await c.query(`${permanent?'DELETE FROM '+table:'UPDATE '+table+' SET deleted_at='+(restore?'NULL':'now()')} WHERE owner_id=$1 AND id=ANY($2::uuid[]) AND ${permanent?"deleted_at IS NOT NULL":restore?"deleted_at>now()-interval '30 days'":'deleted_at IS NULL'} RETURNING id`,[owner,ids]);if(result.rowCount!==ids.length)throw Error('Data berubah atau tidak tersedia. Muat ulang halaman.');}
  await c.query('COMMIT');}catch(e){await c.query('ROLLBACK');throw e}finally{c.release()}
 }
 

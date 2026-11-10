@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {changeTrash,ensureStockPrices,ensureDownloadSchema} from '../lib/db';
 const calls:{sql:string;values?:unknown[]}[]=[];let stale=false;
-const client={release(){},async query(sql:string,values?:unknown[]){calls.push({sql,values});if(sql.startsWith('UPDATE '))return{rowCount:stale&&sql.includes('stock_movements')?0:(values?.[1] as string[]).length,rows:[]};return {rowCount:1,rows:[]}}};
+const client={release(){},async query(sql:string,values?:unknown[]){calls.push({sql,values});if(sql.startsWith('UPDATE ')||sql.startsWith('DELETE '))return{rowCount:stale&&sql.includes('stock_movements')?0:(values?.[1] as string[]).length,rows:[]};return {rowCount:1,rows:[]}}};
 process.env.DATABASE_URL='postgres://test-only';(globalThis as any).bajukuPool={connect:async()=>client};
 test('bulk server mutation scopes all sources to owner and rolls back stale selections',async()=>{
  await ensureStockPrices();await ensureDownloadSchema();calls.length=0;stale=true;
@@ -12,4 +12,10 @@ test('bulk server mutation scopes all sources to owner and rolls back stale sele
 test('restore keeps original data and rejects expired entries in SQL',async()=>{
  calls.length=0;stale=false;await changeTrash('owner-b',[{source:'download',id:'file-id'}],true);
  const update=calls.find(c=>c.sql.startsWith('UPDATE '))!;assert.match(update.sql,/UPDATE download_history SET deleted_at=NULL/);assert.match(update.sql,/deleted_at>now\(\)-interval '30 days'/);assert.deepEqual(update.values,['owner-b',['file-id']]);assert.equal(calls.at(-1)?.sql,'COMMIT');
+});
+
+test('permanent deletion scopes deleted rows to owner and rolls back stale selections',async()=>{
+ calls.length=0;stale=false;await changeTrash('owner-c',[{source:'sale',id:'gone-id'}],false,true);
+ const deletion=calls.find(c=>c.sql.startsWith('DELETE '))!;assert.ok(deletion.sql.includes('owner_id=$1 AND id=ANY($2::uuid[]) AND deleted_at IS NOT NULL'));assert.deepEqual(deletion.values,['owner-c',['gone-id']]);assert.equal(calls.at(-1)?.sql,'COMMIT');
+ calls.length=0;stale=true;await assert.rejects(changeTrash('owner-c',[{source:'sale',id:'gone-id'},{source:'stock',id:'stale-id'}],false,true));assert.equal(calls.at(-1)?.sql,'ROLLBACK');
 });

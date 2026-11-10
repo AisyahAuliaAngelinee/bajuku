@@ -15,3 +15,11 @@ export async function demoTrash(records:TrashRecord[],restore=false){
  sessionStorage.setItem('bajuku-demo-data',JSON.stringify(data));sessionStorage.setItem('bajuku-demo-history',JSON.stringify(history));window.dispatchEvent(new Event('baju-data-changed'));
 }
 export async function demoHistory(){const {listDemoDownloads}=await import('./downloads');const files=await listDemoDownloads(true);const rows=recentHistory(JSON.parse(sessionStorage.getItem('bajuku-demo-history')||'[]') as HistoryEntry[]).filter(r=>r.action==='deleted'&&r.payload);sessionStorage.setItem('bajuku-demo-history',JSON.stringify(rows));return [...rows,...files.filter(f=>f.deletedAt).map(f=>({id:f.id,sourceId:f.id,source:'download' as const,action:'deleted' as const,product:f.filename,variant:f.format,quantity:f.count,direction:'',notes:'',invoice:'',occurredAt:f.deletedAt!}))];}
+
+export async function permanentlyDeleteDemo(records:TrashRecord[]){
+ const history=await demoHistory();
+ if(records.some(r=>!history.some(h=>h.source===r.source&&h.sourceId===r.id)))throw Error('Data tidak tersedia di History.');
+ const {deleteDemoDownloads}=await import('./downloads');
+ const ids=records.filter(r=>r.source==='download').map(r=>r.id);if(ids.length)await deleteDemoDownloads(ids);
+ sessionStorage.setItem('bajuku-demo-history',JSON.stringify(history.filter(h=>h.source!=='download'&&!records.some(r=>r.source===h.source&&r.id===h.sourceId))));window.dispatchEvent(new Event('baju-data-changed'));
+}

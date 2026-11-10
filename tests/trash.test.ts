@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {addDemoHistory,demoTrash,demoHistory} from '../lib/history';
+import {addDemoHistory,demoTrash,demoHistory,permanentlyDeleteDemo} from '../lib/history';
 const store=new Map<string,string>();
 Object.defineProperty(globalThis,'sessionStorage',{value:{getItem:(k:string)=>store.get(k)||null,setItem:(k:string,v:string)=>store.set(k,v)},configurable:true});
 Object.defineProperty(globalThis,'window',{value:new EventTarget(),configurable:true});
@@ -22,4 +22,15 @@ test('stale bulk selection does not remove valid rows partially',async()=>{
 test('History only collects deleted records, and a second restore is rejected',async()=>{
  store.clear();addDemoHistory('sale','created',sale);addDemoHistory('sale','updated',sale);assert.equal(store.size,0);
  store.set('bajuku-demo-data',JSON.stringify({rows:[sale],stock:[]}));await demoTrash([{source:'sale',id:sale.id}]);await demoTrash([{source:'sale',id:sale.id}],true);await assert.rejects(demoTrash([{source:'sale',id:sale.id}],true));assert.equal(JSON.parse(store.get('bajuku-demo-data')!).rows.length,1);
+});
+
+test('permanent demo deletion removes only selected history and prevents restore',async()=>{
+ store.clear();store.set('bajuku-demo-data',JSON.stringify({rows:[sale],stock:[stock]}));
+ await assert.rejects(permanentlyDeleteDemo([{source:'sale',id:sale.id}]));
+ await demoTrash([{source:'sale',id:sale.id},{source:'stock',id:stock.id}]);
+ await assert.rejects(permanentlyDeleteDemo([{source:'sale',id:sale.id},{source:'stock',id:'missing'}]));
+ assert.equal((await demoHistory()).length,2);
+ await permanentlyDeleteDemo([{source:'sale',id:sale.id}]);assert.equal((await demoHistory()).length,1);
+ await assert.rejects(demoTrash([{source:'sale',id:sale.id}],true));
+ await demoTrash([{source:'stock',id:stock.id}],true);assert.deepEqual(JSON.parse(store.get('bajuku-demo-data')!),{rows:[],stock:[stock]});
 });

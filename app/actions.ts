@@ -18,8 +18,8 @@ export async function previewInvoice(product:string,variant:string){const sessio
 
 export async function removeHistory(id:string){const session=await auth();if(!session?.user?.id)return{error:'Silakan login kembali.'};if(!z.uuid().safeParse(id).success)return{error:'ID riwayat tidak valid.'};try{await deleteHistory(session.user.id,id);revalidatePath('/transaction-history');return{ok:true};}catch{return{error:'Riwayat gagal dihapus.'}}}
 
-export async function mutateTrash(input:unknown,restore=false){
+export async function mutateTrash(input:unknown,restore=false,permanent=false){
  const session=await auth();if(!session?.user?.id)return{error:'Silakan login kembali.'};
  const parsed=z.array(z.object({source:z.enum(['sale','stock','download']),id:z.uuid()})).min(1).max(500).safeParse(input);if(!parsed.success)return{error:'Pilih maksimal 500 catatan yang valid.'};
- try{const {changeTrash}=await import('@/lib/db');await changeTrash(session.user.id,parsed.data,restore);revalidatePath('/');revalidatePath('/transaction-history');revalidatePath('/download-history');return{ok:true}}catch{return{error:'Data berubah atau gagal diproses. Muat ulang dan coba lagi.'}}
+ try{const {changeTrash}=await import('@/lib/db');await changeTrash(session.user.id,parsed.data,restore,permanent);revalidatePath('/');revalidatePath('/transaction-history');revalidatePath('/download-history');return{ok:true}}catch{return{error:'Data berubah atau gagal diproses. Muat ulang dan coba lagi.'}}
 }

@@ -1,2 +1,4 @@
-import {LoaderCircle} from 'lucide-react';
-export function TableLoading({label='Memuat data...'}:{label?:string}){return <div className="table-loading" role="status" aria-live="polite"><LoaderCircle className="loading-spinner" size={18}/><span>{label}</span></div>}
+export function Skeleton({className=''}:{className?:string}){return <div aria-hidden="true" className={`skeleton ${className}`}/>}
+export function TableLoading({label='Memuat data...'}:{label?:string}){return <div className="table-loading" role="status" aria-label={label}><span className="sr-only">{label}</span><div className="skeleton-table">{Array.from({length:6},(_,i)=><div className="skeleton-row" key={i}>{Array.from({length:5},(_,j)=><Skeleton key={j}/>)}</div>)}</div></div>}
+export function ChartLoading(){return <section className="chart-card" role="status" aria-label="Memuat grafik"><Skeleton className="skeleton-title"/><Skeleton className="skeleton-chart"/></section>}
+export function MetricsLoading({stock=false}:{stock?:boolean}){return <section className={stock?'stock-metrics':'metrics'} role="status" aria-label="Memuat ringkasan">{Array.from({length:4},(_,i)=><article key={i}><Skeleton className="skeleton-title"/><Skeleton className="skeleton-value"/><Skeleton/></article>)}</section>}

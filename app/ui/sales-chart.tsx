@@ -1,4 +1,5 @@
 'use client';
+import {ChartLoading} from './table-loading';
 import {useLocalTime} from './use-local-time';
 import {Button, Modal, Dialog, Select, Fade, AlertDialog} from './controls';
 import {ToggleGroup} from '@animate-ui/react/primitives/radix-ui/toggle-group';
@@ -7,13 +8,13 @@ import {ResponsiveContainer,LineChart,Line,XAxis,YAxis,CartesianGrid,Tooltip} fr
 import {type Transaction} from '@/lib/transactions';
 import {chartRange,salesSeries,type ChartPeriod} from '@/lib/chart-data';
 const currency=(v:number)=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(v);
-export default function SalesChart({rows}:{rows:Transaction[]}){
+export default function SalesChart({rows,loading=false}:{rows:Transaction[];loading?:boolean}){
  const {today:anchor}=useLocalTime();
  const [period,setPeriod]=useState<ChartPeriod>('month'),[customFrom,setFrom]=useState<string|null>(null),[customTo,setTo]=useState<string|null>(null);
  const from=customFrom??anchor,to=customTo??anchor;
  const range=chartRange(period,anchor,from,to),valid=Boolean(range.from&&range.to&&range.from<=range.to&&Number(range.to.slice(0,4))-Number(range.from.slice(0,4))<=99);
  const data=valid?salesSeries(rows,range.from,range.to,period==='year'):[];
  const total=data.reduce((sum,r)=>sum+r.revenue,0);
- if(!anchor)return <section className="chart-card" aria-label="Grafik penjualan"><h2>Grafik penjualan</h2><p role="status">Memuat grafik…</p></section>;
+ if(!anchor||loading)return <ChartLoading/>;
  return <section className="chart-card" aria-label="Grafik penjualan"><div className="section-heading"><div><span className="eyebrow">PERFORMA TOKO</span><h2>Grafik penjualan</h2><p>Total harga jual × jumlah barang, dalam rupiah.</p></div><ToggleGroup.Root type="single" value={period} onValueChange={value=>{if(value)setPeriod(value as ChartPeriod)}} className="segmented" aria-label="Periode grafik">{([['day','Hari'],['month','Bulan'],['year','Tahun'],['custom','Custom tanggal']] as const).map(([value,label])=><ToggleGroup.Item key={value} value={value} aria-label={label}>{label}</ToggleGroup.Item>)}</ToggleGroup.Root></div><div className="chart-period">{period==='custom'?<><label>Dari<input aria-label="Tanggal mulai grafik" type="date" value={from} onChange={e=>setFrom(e.target.value)}/></label><label>Sampai<input aria-label="Tanggal akhir grafik" type="date" value={to} onChange={e=>setTo(e.target.value)}/></label></>:null}<div><strong>{currency(total)}</strong><small>{range.from} — {range.to}{period==='week'?' · Senin–Minggu':''}</small></div></div>{!valid?<p role="alert" className="error">Pilih rentang tanggal yang valid (maksimal 100 tahun).</p>:<><div className="sales-chart"><ResponsiveContainer width="100%" height="100%"><LineChart data={data} margin={{top:12,right:20,bottom:4,left:12}} accessibilityLayer><CartesianGrid strokeDasharray="3 5" vertical={false} stroke="#e6e9e5"/><XAxis dataKey="label" tick={{fontSize:11}} tickLine={false} axisLine={false} minTickGap={25}/><YAxis width={68} tick={{fontSize:10}} tickLine={false} axisLine={false} tickFormatter={n=>new Intl.NumberFormat('id-ID',{notation:'compact',maximumFractionDigits:1}).format(n)}/><Tooltip content={({active,payload})=>{const point=payload?.[0]?.payload as {label:string;revenue:number;pieces:number}|undefined;return active&&point?<div className="sales-tooltip"><strong>{point.label}</strong><div><span>Total penjualan</span><b>{currency(point.revenue)}</b></div><div><span>Baju terjual</span><b>{new Intl.NumberFormat('id-ID').format(point.pieces)} pcs</b></div></div>:null}}/><Line type="linear" dataKey="revenue" name="Penjualan" stroke="#245d48" strokeWidth={3} dot={data.length<32?{r:3,fill:'#fff',strokeWidth:2}:false} activeDot={{r:6}} isAnimationActive={false}/></LineChart></ResponsiveContainer></div><p className="chart-caption">{data.every(r=>r.revenue===0)?'Belum ada penjualan pada periode ini. ':''}{period==='year'||data[0]?.key.length===7?'Total per bulan.':'Total per hari.'} Grafik menggunakan semua transaksi pada periode terpilih, terpisah dari filter tabel.</p></>}</section>
 }

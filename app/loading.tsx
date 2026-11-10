@@ -1,2 +1,2 @@
-import {TableLoading} from './ui/table-loading';
-export default function Loading(){return <main className="loading-page"><h1>Memuat pembukuan</h1>{['Barang masuk & keluar','Transaksi harian'].map(label=><section className="transactions" key={label}><h2>{label}</h2><TableLoading/><div className="table-skeleton"/></section>)}</main>}
+import {TableLoading,ChartLoading,MetricsLoading,Skeleton} from './ui/table-loading';
+export default function Loading(){return <main className="content"><Skeleton className="skeleton-title"/><ChartLoading/><section className="inventory-card"><Skeleton className="skeleton-title"/><MetricsLoading stock/><TableLoading/></section><MetricsLoading/><section className="transactions"><Skeleton className="skeleton-title"/><TableLoading/></section></main>}
