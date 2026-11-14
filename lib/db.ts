@@ -12,7 +12,7 @@ export async function saveTransaction(owner:string,data:TransactionInput,id?:str
  const catalog=await c.query("SELECT id,price::float8 AS price,cost::float8 AS cost FROM stock_movements WHERE owner_id=$1 AND deleted_at IS NULL AND direction='in' AND lower(trim(product))=lower(trim($2)) AND lower(trim(variant))=lower(trim($3)) ORDER BY created_at DESC,id DESC LIMIT 1",[owner,data.product,data.variant]);
  if(!catalog.rowCount){const historic=id?await c.query('SELECT id FROM transactions WHERE owner_id=$1 AND deleted_at IS NULL AND id=$2 AND product=$3 AND variant=$4',[owner,id,data.product,data.variant]):null;if(!historic?.rowCount)throw Error('Pilih produk dan varian dari barang masuk.');}
  if(data.imageId&&!(await c.query('SELECT id FROM transaction_images WHERE id=$1 AND owner_id=$2',[data.imageId,owner])).rowCount)throw Error('Gambar tidak ditemukan');
- if(!id){if(catalog.rows[0]?.price==null||catalog.rows[0]?.cost==null)throw Error('Lengkapi harga barang masuk.');data={...data,price:catalog.rows[0].price,cost:catalog.rows[0].cost}}
+ if(!id){if(catalog.rows[0]?.price==null||catalog.rows[0]?.cost==null)throw Error('Lengkapi harga barang masuk.');data={...data,cost:catalog.rows[0].cost}}
  const values=[data.date,data.product,data.variant,data.quantity,data.price,data.cost,data.payment,data.notes,data.imageId||null,owner];
  if(id){const r=await c.query('UPDATE transactions SET sale_date=$1,product=$2,variant=$3,quantity=$4,price=$5,cost=$6,payment=$7,notes=$8,image_id=$9 WHERE owner_id=$10 AND id=$11 AND deleted_at IS NULL RETURNING id',[...values,id]);if(!r.rowCount)throw Error('Not found');}
  else{
