@@ -116,6 +116,7 @@ export default function Dashboard({
 		[open, setOpen] = useState(false),
 		[editing, setEditing] = useState<string>(),
 		[draft, setDraft] = useState(fresh()),
+		[totalInput, setTotalInput] = useState<number | null>(null),
 		[error, setError] = useFeedbackState("error"),
 		[toast, setToast] = useFeedbackState(),
 		[pending, start] = useTransition();
@@ -232,8 +233,14 @@ export default function Dashboard({
 									| "payment"
 							] ?? ""),
 	);
-	const summary = totals(filtered),
-		preview = totals([draft]);
+	const total = totalInput ?? draft.price * draft.quantity,
+		unitPrice = total / draft.quantity,
+		entry: TransactionInput = {
+			...draft,
+			price: Number.isInteger(unitPrice) ? unitPrice : NaN,
+		},
+		summary = totals(filtered),
+		preview = totals([entry]);
 	const catalog = stock.filter((r) => r.direction === "in");
 	const modelOptions = [...new Set(catalog.map((r) => r.product))];
 	const variantOptions = [
@@ -316,6 +323,7 @@ export default function Dashboard({
 	}, [toast]);
 	function begin(row?: Transaction) {
 		setImageFile(null);
+		setTotalInput(null);
 		setDraft(row ? { ...row } : fresh(localToday()));
 		setEditing(row?.id);
 		setError("");
@@ -339,8 +347,12 @@ export default function Dashboard({
 			);
 			return;
 		}
-		if (!transactionSchema.safeParse(draft).success) {
-			setError("Periksa tanggal, jumlah, nama baju, dan harga.");
+		if (!transactionSchema.safeParse(entry).success) {
+			setError(
+				Number.isNaN(entry.price) && total >= 0
+					? "Total harga harus habis dibagi jumlah pcs (harga per pcs bilangan bulat)."
+					: "Periksa tanggal, jumlah, nama baju, dan harga.",
+			);
 			return;
 		}
 		start(async () => {
@@ -348,7 +360,7 @@ export default function Dashboard({
 			try {
 				if (demo) {
 					const data = {
-						...draft,
+						...entry,
 						createdAt: editing
 							? rows.find((r) => r.id === editing)?.createdAt
 							: new Date().toISOString(),
@@ -391,7 +403,7 @@ export default function Dashboard({
 				}
 				const result = await mutateTransaction(
 					{
-						...draft,
+						...entry,
 						imageId,
 						invoice: editing ? draft.invoice : reservation.invoice,
 					},
@@ -881,6 +893,7 @@ export default function Dashboard({
 								value={draft.product}
 								onValueChange={(value) => {
 									setError("");
+									setTotalInput(null);
 									setDraft((d) => ({
 										...d,
 										product: value,
@@ -907,9 +920,10 @@ export default function Dashboard({
 								label="Ukuran / warna"
 								disabled={!draft.product}
 								value={draft.variant || "__none__"}
-								onValueChange={(value) =>
-									change("variant", value === "__none__" ? "" : value)
-								}
+								onValueChange={(value) => {
+									setTotalInput(null);
+									change("variant", value === "__none__" ? "" : value);
+								}}
 								options={[
 									...new Set([
 										...variantOptions,
@@ -939,7 +953,7 @@ export default function Dashboard({
 							/>
 						</label>
 						<label>
-							Harga jual / pcs (Rp)
+							Harga jual total (Rp)
 							<input
 								required
 								type="number"
@@ -947,18 +961,17 @@ export default function Dashboard({
 								max="1000000000"
 								step="1"
 								inputMode="numeric"
-								value={Number.isNaN(draft.price) ? "" : draft.price}
+								value={Number.isNaN(total) ? "" : total}
 								onChange={(e) =>
-									change(
-										"price",
+									setTotalInput(
 										e.target.value === "" ? NaN : Number(e.target.value),
 									)
 								}
 							/>
 							<small>
 								{editing
-									? "Bisa diubah, misalnya jika pembeli membayar lebih."
-									: `Default ${rupiah(selectedStock?.price ?? 0)} dari barang masuk terbaru. Bisa diubah, misalnya jika pembeli membayar lebih dan tidak minta kembalian.`}
+									? "Total untuk semua pcs. Bisa diubah, misalnya jika pembeli membayar lebih."
+									: `Default ${rupiah(selectedStock?.price ?? 0)} × jumlah pcs. Bisa diubah, misalnya jika pembeli membayar lebih dan tidak minta kembalian.`}
 							</small>
 						</label>
 						<label>
