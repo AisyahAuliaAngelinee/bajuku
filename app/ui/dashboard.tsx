@@ -47,6 +47,7 @@ import { Alert, AlertTitle, AlertDescription } from "./alert";
 import { CircleAlert } from "lucide-react";
 import SalesChart from "./sales-chart";
 import Inventory from "./inventory";
+import {filterTransactions} from "@/lib/transaction-filters";
 import PaymentSummaryCard from "./payment-summary-card";
 import Outgoing from "./outgoing";
 import Sidebar, { menus, type MenuId } from "./sidebar";
@@ -114,12 +115,12 @@ export default function Dashboard({
 	}, []);
 	const router = useRouter(),
 		[localRows, setLocalRows] = useState(initialRows),
-		[selectedDate, setDate] = useState<string | null>(null),
+		[dateFrom,setDateFrom]=useState(""),
+		[dateTo,setDateTo]=useState(""),
 		[search, setSearch] = useState(""),
 		[open, setOpen] = useState(false),
 		[editing, setEditing] = useState<string>(),
 		[draft, setDraft] = useState(fresh()),
-		[totalInput, setTotalInput] = useState<number | null>(null),
 		[receivedInput,setReceivedInput]=useState<number|null>(null),
 		[error, setError] = useFeedbackState("error"),
 		[toast, setToast] = useFeedbackState(),
@@ -197,7 +198,7 @@ export default function Dashboard({
 			await downloadBookkeeping(
 				format,
 				filtered,
-				{ name, date, search },
+				{ name, date:"", dateFrom, dateTo, search, timeZone },
 				demo,
 				sort,
 			);
@@ -208,16 +209,10 @@ export default function Dashboard({
 			setExporting(null);
 		}
 	}
-	const date = selectedDate ?? today;
+	const invalidRange=!!dateFrom&&!!dateTo&&dateFrom>dateTo;
 	const rows = demo ? localRows : initialRows;
 	const filtered = sortRows(
-		rows.filter(
-			(r) =>
-				(!date || r.date === date) &&
-				`${r.product} ${r.invoice} ${r.variant}`
-					.toLowerCase()
-					.includes(search.toLowerCase()),
-		),
+		filterTransactions(rows,{dateFrom,dateTo,search}),
 		sort,
 		(r, k) =>
 			k === "product"
@@ -237,11 +232,9 @@ export default function Dashboard({
 									| "payment"
 							] ?? ""),
 	);
-	const total = totalInput ?? draft.price * draft.quantity,
-		unitPrice = total / draft.quantity,
+	const total = draft.price * draft.quantity,
 		entry: TransactionInput = {
 			...draft,
-			price: Number.isInteger(unitPrice) ? unitPrice : NaN,
 			amountReceived: receivedInput ?? (draft.payment === "Utang" ? 0 : total),
 		},
 		summary = totals(filtered),
@@ -328,7 +321,6 @@ export default function Dashboard({
 	}, [toast]);
 	function begin(row?: Transaction) {
 		setImageFile(null);
-		setTotalInput(null);
 		setReceivedInput(row?paymentSummary(row).received:null);
 		setDraft(row ? { ...row } : fresh(localToday()));
 		setEditing(row?.id);
@@ -355,9 +347,7 @@ export default function Dashboard({
 		}
 		if (!transactionSchema.safeParse(entry).success) {
 			setError(
-				Number.isNaN(entry.price) && total >= 0
-					? "Total harga harus habis dibagi jumlah pcs (harga per pcs bilangan bulat)."
-					: "Periksa tanggal, jumlah, nama baju, harga, dan uang diterima.",
+				"Periksa tanggal, jumlah, nama baju, harga, dan uang diterima.",
 			);
 			return;
 		}
@@ -384,7 +374,7 @@ export default function Dashboard({
 								)
 							: [{ ...data, id: rowId }, ...prev],
 					);
-					setDate(data.date);
+					setDateFrom("");setDateTo("");setSort({key:"createdAt",direction:"desc"});
 					setOpen(false);
 					setToast("Transaksi demo tersimpan.");
 					return;
@@ -421,7 +411,7 @@ export default function Dashboard({
 					return;
 				}
 				router.refresh();
-				setDate(draft.date);
+				setDateFrom("");setDateTo("");setSort({key:"createdAt",direction:"desc"});
 				setOpen(false);
 				setImageFile(null);
 				setToast(
@@ -519,23 +509,7 @@ export default function Dashboard({
 							if (row) setDeleting(row);
 						}}
 					/>
-					<Outgoing sales={rows} demo={demo} loading={pending} onEdit={id=>{const row=rows.find(r=>r.id===id);if(row)begin(row)}} onDelete={id=>{const row=rows.find(r=>r.id===id);if(row)setDeleting(row)}}/><div className="period">
-						<div>
-							<CalendarDays size={17} />
-							<span>{date ? "Ringkasan tanggal" : "Semua tanggal"}</span>
-							<input
-								aria-label="Filter tanggal transaksi"
-								type="date"
-								value={date}
-								onChange={(e) => setDate(e.target.value)}
-							/>
-							<Button onClick={() => setDate(date ? "" : localToday())}>
-								{date ? "Semua tanggal" : "Hari ini"}
-							</Button>
-						</div>
-						<small>Zona waktu {timeZone || "perangkat"} · IDR</small>
-					</div>
-					{pending ? (
+					<Outgoing sales={rows} demo={demo} loading={pending} onEdit={id=>{const row=rows.find(r=>r.id===id);if(row)begin(row)}} onDelete={id=>{const row=rows.find(r=>r.id===id);if(row)setDeleting(row)}}/>{pending ? (
 						<MetricsLoading />
 					) : (
 						<section className="metrics">
@@ -585,7 +559,19 @@ export default function Dashboard({
 								<p>Setiap penjualan, lengkap dengan harga dan modalnya.</p>
 							</div>
 						</div>
-						<div className="transaction-toolbar">
+						<div className="period transaction-date-filter">
+						<div>
+							<CalendarDays size={17} />
+<span>{dateFrom||dateTo?"Rentang tanggal transaksi":"Semua tanggal"}</span>
+ <label>Dari <input aria-label="Tanggal awal transaksi" type="date" value={dateFrom} max={dateTo||undefined} onChange={e=>setDateFrom(e.target.value)}/></label>
+ <label>Sampai <input aria-label="Tanggal akhir transaksi" type="date" value={dateTo} min={dateFrom||undefined} onChange={e=>setDateTo(e.target.value)}/></label>
+ <Button onClick={()=>{const day=localToday();setDateFrom(day);setDateTo(day)}}>Hari ini</Button>
+ <Button onClick={()=>{setDateFrom("");setDateTo("")}}>Semua tanggal</Button>
+						</div>
+						<small>Zona waktu {timeZone || "perangkat"} · IDR</small>
+					</div>
+					{invalidRange&&<p className="error" role="alert">Tanggal akhir harus sama atau setelah tanggal awal.</p>}
+<div className="transaction-toolbar">
 							<div className="download-actions">
 								<Button className="primary" onClick={() => begin()}>
 									<Plus size={18} />
@@ -593,14 +579,14 @@ export default function Dashboard({
 								</Button>
 								<Button
 									className="secondary"
-									disabled={exporting !== null}
+									disabled={exporting !== null||invalidRange}
 									onClick={() => exportFile("xlsx")}>
 									<Download size={15} />
 									{exporting === "xlsx" ? "Menyiapkan..." : "Excel (.xlsx)"}
 								</Button>
 								<Button
 									className="secondary"
-									disabled={exporting !== null}
+									disabled={exporting !== null||invalidRange}
 									onClick={() => exportFile("pdf")}>
 									<Download size={15} />
 									{exporting === "pdf" ? "Menyiapkan..." : "PDF"}
@@ -621,7 +607,7 @@ export default function Dashboard({
 							<PaginatedTable
 								demo={demo}
 								label="Transaksi harian"
-								resetKey={JSON.stringify([date, search, sort])}>
+								resetKey={JSON.stringify([dateFrom,dateTo, search, sort])}>
 								<thead>
 									<tr>
 										<SortHeading
@@ -903,7 +889,6 @@ export default function Dashboard({
 								value={draft.product}
 								onValueChange={(value) => {
 									setError("");
-									setTotalInput(null);
 									setDraft((d) => ({
 										...d,
 										product: value,
@@ -931,7 +916,6 @@ export default function Dashboard({
 								disabled={!draft.product}
 								value={draft.variant || "__none__"}
 								onValueChange={(value) => {
-									setTotalInput(null);
 									change("variant", value === "__none__" ? "" : value);
 								}}
 								options={[
@@ -964,24 +948,11 @@ export default function Dashboard({
 						</label>
 						<label>
 							Harga jual total (Rp)
-							<input
-								required
-								type="number"
-								min="0"
-								max="1000000000"
-								step="1"
-								inputMode="numeric"
-								value={Number.isNaN(total) ? "" : total}
-								onChange={(e) =>
-									setTotalInput(
-										e.target.value === "" ? NaN : Number(e.target.value),
-									)
-								}
-							/>
+<input disabled readOnly aria-label="Harga jual total (Rp)" value={Number.isFinite(total)?rupiah(total):"—"}/>
 							<small>
 								{editing
 									? "Total harga barang untuk semua pcs. Uang dari pembeli dicatat pada Uang diterima."
-									: `Default ${rupiah(selectedStock?.price ?? 0)} × jumlah pcs. Uang dari pembeli dicatat pada Uang diterima.`}
+									: `Otomatis ${rupiah(selectedStock?.price ?? 0)} × jumlah pcs. Uang dari pembeli dicatat pada Uang diterima.`}
 							</small>
 						</label>
 						<label>

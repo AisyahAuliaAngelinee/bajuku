@@ -24,3 +24,5 @@ Rincian dapat dilihat kembali melalui Detail transaksi, sheet Pembayaran pada un
 ## Validasi
 
 `tests/payment.test.ts` memeriksa perhitungan, batas nominal, kompatibilitas data lama, total stok seluruh hari, dan ekspor. `tests/payment-db.test.ts` memeriksa penyimpanan/readback melalui mock database, scope pemilik, dan kesamaan migrasi runtime dengan berkas SQL. Pengujian database tidak menggantikan pemeriksaan koneksi database produksi.
+
+Harga jual total pada dialog dinonaktifkan dan selalu dihitung dari harga per pcs × jumlah. Uang diterima tetap dapat diisi terpisah.

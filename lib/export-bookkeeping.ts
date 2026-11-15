@@ -1,8 +1,9 @@
+import {transactionPeriod} from './transaction-filters';
 import {chartDays,addExcelCharts} from './excel-charts';
 import {browserTimeZone,localTimestamp} from './local-time';
 import {paymentSummary,type Transaction} from './transactions';
 
-export type ExportContext = {name: string; date: string; search: string; timeZone?:string};
+export type ExportContext = {name: string; date: string; dateFrom?:string; dateTo?:string; search: string; timeZone?:string};
 const money = (value: number) => new Intl.NumberFormat('id-ID', {maximumFractionDigits: 0}).format(value);
 const period = (date: string) => date ? date.split('-').reverse().join('/') : 'Semua tanggal';
 const generated = (timeZone=browserTimeZone()) => localTimestamp(new Date(),timeZone);
@@ -21,7 +22,7 @@ export async function buildWorkbook(rows: Transaction[], context: ExportContext)
   sheet.mergeCells('A1:K1');
   sheet.getRow(1).font = {bold: true, size: 18, color: {argb: 'FF245D48'}};
   sheet.addRow([`Pemilik: ${context.name}`]);
-  sheet.addRow([`Periode: ${period(context.date)} | Pencarian: ${context.search || 'Semua transaksi'}`]);
+  sheet.addRow([`Periode: ${transactionPeriod(context)} | Pencarian: ${context.search || 'Semua transaksi'}`]);
   sheet.addRow([`Dibuat: ${generated(context.timeZone)}`]);
   for (const n of [2, 3, 4]) sheet.mergeCells(`A${n}:K${n}`);
   sheet.addRow([]);
@@ -56,7 +57,7 @@ export async function buildWorkbook(rows: Transaction[], context: ExportContext)
   for(let r=6;r<=total.number;r++)for(let c=1;c<=11;c++)sheet.getCell(r,c).border={top:r===total.number?{style:'medium',color:{argb:'FF245D48'}}:border,bottom:border,left:border,right:border};
   const graph=workbook.addWorksheet('Grafik');graph.columns=[{width:17},{width:23},{width:23},...Array.from({length:12},()=>({width:10}))];
   graph.mergeCells('A1:O1');graph.getCell('A1').value='Grafik penjualan harian';graph.getCell('A1').font={size:18,bold:true,color:{argb:'FF245D48'}};
-  graph.mergeCells('A2:O2');graph.getCell('A2').value=`Periode: ${period(context.date)} · Filter: ${context.search||'Semua transaksi'}`;
+  graph.mergeCells('A2:O2');graph.getCell('A2').value=`Periode: ${transactionPeriod(context)} · Filter: ${context.search||'Semua transaksi'}`;
   graph.mergeCells('A3:O3');graph.getCell('A3').value='Sumber: transaksi sesuai filter unduhan. Nilai dalam rupiah.';
   graph.getRow(5).values=['Tanggal','Harga total (Rp)','Total modal (Rp)'];
   chartDays(rows).forEach((day,i)=>{const r=i+6;graph.getRow(r).values=[day.date,{formula:`SUMIF(Transaksi!$A$7:$A$${Math.max(7,end)},A${r},Transaksi!$H$7:$H$${Math.max(7,end)})`,result:day.revenue},{formula:`SUMIF(Transaksi!$A$7:$A$${Math.max(7,end)},A${r},Transaksi!$I$7:$I$${Math.max(7,end)})`,result:day.cost}];});
@@ -85,7 +86,7 @@ export async function buildPdf(rows: Transaction[], context: ExportContext) {
   doc.setFont('helvetica', 'bold'); doc.setFontSize(18); doc.setTextColor(36,93,72);
   doc.text('BAJU THIEO | Pembukuan penjualan', 12, 17);
   doc.setFont('helvetica', 'normal'); doc.setTextColor(45); doc.setFontSize(9);
-  const metadata = doc.splitTextToSize(`Pemilik: ${context.name}\nPeriode: ${period(context.date)} | Pencarian: ${context.search || 'Semua transaksi'}\nDibuat: ${generated(context.timeZone)}`, 270);
+  const metadata = doc.splitTextToSize(`Pemilik: ${context.name}\nPeriode: ${transactionPeriod(context)} | Pencarian: ${context.search || 'Semua transaksi'}\nDibuat: ${generated(context.timeZone)}`, 270);
   doc.text(metadata, 12, 25);
   const sums = summary(rows);
   const start = 28 + metadata.length * 4;
@@ -118,15 +119,15 @@ export async function createBookkeepingFile(format: 'xlsx' | 'pdf', rows: Transa
     const bytes = await addExcelCharts(new Uint8Array(await workbook.xlsx.writeBuffer()),rows);
     blob = new Blob([new Uint8Array(bytes)], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
   } else blob = (await buildPdf(rows, context)).output('blob');
-  return {blob,filename:`${filename(context.date)}.${format}`};
+  return {blob,filename:`${filename(context.dateFrom||context.dateTo?`${context.dateFrom||"awal"}_sampai_${context.dateTo||"terakhir"}`:context.date)}.${format}`};
 }
 
 export function saveBlob(blob:Blob, filename:string){
  const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
 }
 export async function downloadBookkeeping(format:'xlsx'|'pdf',rows:Transaction[],context:ExportContext,demo=false,sort?:{key:string;direction:'asc'|'desc'}){
- if(demo){const file=await createBookkeepingFile(format,rows,context);const {saveDemoDownload}=await import('./downloads');await saveDemoDownload({id:crypto.randomUUID(),filename:file.filename,format,count:rows.length,createdAt:new Date().toISOString(),period:context.date||'Semua tanggal',search:context.search,size:file.blob.size,blob:file.blob});saveBlob(file.blob,file.filename);return;}
- const response=await fetch('/api/downloads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({format,date:context.date,search:context.search,sort,timeZone:context.timeZone||browserTimeZone()})});
+ if(demo){const file=await createBookkeepingFile(format,rows,context);const {saveDemoDownload}=await import('./downloads');await saveDemoDownload({id:crypto.randomUUID(),filename:file.filename,format,count:rows.length,createdAt:new Date().toISOString(),period:transactionPeriod(context),search:context.search,size:file.blob.size,blob:file.blob});saveBlob(file.blob,file.filename);return;}
+ const response=await fetch('/api/downloads',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({format,date:context.date,dateFrom:context.dateFrom,dateTo:context.dateTo,search:context.search,sort,timeZone:context.timeZone||browserTimeZone()})});
  const result=await response.json();if(!response.ok)throw Error(result.error||'Unduhan gagal');
  await redownload(result.id,result.filename);
 }
