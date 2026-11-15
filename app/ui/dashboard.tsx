@@ -46,6 +46,7 @@ import { Alert, AlertTitle, AlertDescription } from "./alert";
 import { CircleAlert } from "lucide-react";
 import SalesChart from "./sales-chart";
 import Inventory from "./inventory";
+import Outgoing from "./outgoing";
 import Sidebar, { menus, type MenuId } from "./sidebar";
 import type { StockMovement } from "@/lib/inventory";
 const rupiah = (n: number) =>
@@ -513,7 +514,7 @@ export default function Dashboard({
 							if (row) setDeleting(row);
 						}}
 					/>
-					<div className="period">
+					<Outgoing sales={rows} demo={demo} loading={pending} onEdit={id=>{const row=rows.find(r=>r.id===id);if(row)begin(row)}} onDelete={id=>{const row=rows.find(r=>r.id===id);if(row)setDeleting(row)}}/><div className="period">
 						<div>
 							<CalendarDays size={17} />
 							<span>{date ? "Ringkasan tanggal" : "Semua tanggal"}</span>

@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import {
 	groupProducts,
+	dailyInventory,
 	inventorySummary,
 	inventoryHistory,
 	stockSchema,
@@ -63,6 +64,7 @@ export default function Inventory({
 	onDeleteSale: (id: string) => void;
 }) {
 	const { today } = useLocalTime();
+ const [selectedDate,setSelectedDate]=useState("");const day=selectedDate||today||"0000-00-00";
 	const [localMovements, setLocalMovements] = useState(movements);
 	const stock = demo ? localMovements : movements;
 	const [managing, setManaging] = useState<{
@@ -116,7 +118,7 @@ export default function Inventory({
 		key: "createdAt",
 		direction: "desc",
 	});
-	const products = inventorySummary(stock, sales, today || "0000-00-00"),
+	const products = dailyInventory(stock, sales, day),
 		matches = (r: { product: string; variant: string }) =>
 			`${r.product} ${r.variant}`.toLowerCase().includes(search.toLowerCase()),
 		visible = sortRows(
@@ -147,7 +149,7 @@ export default function Inventory({
 						cost: row.cost ?? 0,
 						direction: "in",
 					}
-				: fresh(localToday()),
+				: fresh(day),
 		);
 		setEditing(row?.id);
 		setError("");
@@ -250,8 +252,8 @@ export default function Inventory({
 			<div className="section-heading">
 				<div>
 					<span className="eyebrow">PERSEDIAAN</span>
-					<h2>Barang masuk & keluar</h2>
-					<p>Penjualan otomatis dihitung sebagai barang keluar.</p>
+					<h2>Barang masuk</h2>
+					<p>Stok bawaan ditambah barang masuk pada tanggal terpilih.</p>
 				</div>
 				<Button className="primary" onClick={() => begin()}>
 					<Plus size={17} />
@@ -263,7 +265,7 @@ export default function Inventory({
 			) : (
 				<div className="stock-metrics">
 					<div>
-						<span>Barang masuk</span>
+						<span>Tersedia hari terpilih</span>
 						<strong>
 							{incoming} <small>pcs</small>
 						</strong>
@@ -302,21 +304,14 @@ export default function Inventory({
 					</div>
 				</div>
 			)}
-			<p className="stock-help">
-				Catat stok awal dan pembelian sebagai barang masuk. Barang keluar
-				otomatis mengikuti transaksi harian. Total stock dihitung kumulatif
-				sampai hari ini per produk dan varian. Sisa stock otomatis tersedia di
-				hari berikutnya; cukup catat tambahan barang masuk baru, tanpa menginput
-				ulang sisa stock. Checkbox persediaan memilih catatan barang masuk;
-				transaksi penjualan dipilih melalui tabel transaksi atau kelola catatan.
-			</p>
+			<p className="stock-help">Tersedia = sisa stock sebelum tanggal terpilih + barang masuk baru. Total stock adalah sisa setelah penjualan hari tersebut. Checkbox hanya memilih barang masuk baru pada tanggal terpilih. Untuk mengoreksi stok bawaan, buka kelola catatan sumber.</p>
 			{negative && (
 				<p className="stock-warning">
 					Ada total stock negatif. Lengkapi catatan stok awal/barang masuk atau
 					koreksi pergerakan. Penjualan lama tetap ikut dihitung.
 				</p>
 			)}
-			<div className="stock-filters">
+			<div className="period"><label>Tanggal barang masuk <input type="date" aria-label="Tanggal barang masuk" value={selectedDate||today} onChange={e=>setSelectedDate(e.target.value)}/></label><Button onClick={()=>setSelectedDate(localToday())}>Hari ini</Button></div><div className="stock-filters">
 				<input
 					aria-label="Cari persediaan"
 					placeholder="Cari produk atau varian..."
@@ -330,7 +325,7 @@ export default function Inventory({
 					demo={demo}
 					label="Persediaan"
 					unit="produk"
-					resetKey={JSON.stringify([search, productSort])}>
+					resetKey={JSON.stringify([day, search, productSort])}>
 					<thead>
 						<tr>
 							<SortHeading
@@ -345,8 +340,7 @@ export default function Inventory({
 								sort={productSort}
 								onSort={setProductSort}
 							/>
-							<SortHeading
-								label="MASUK"
+							<th>STOK AWAL</th><th>MASUK HARI INI</th><SortHeading label="TERSEDIA"
 								column="incoming"
 								sort={productSort}
 								onSort={setProductSort}
@@ -375,7 +369,7 @@ export default function Inventory({
 									data-records={stock
 										.filter(
 											(r) =>
-												r.date <= today &&
+												r.direction === "in" && r.date === day &&
 												group.variants.some(
 													(p) =>
 														productKey(p.product, p.variant) ===
@@ -405,7 +399,7 @@ export default function Inventory({
 										</Button>
 									</td>
 									<td>{group.variants.length} varian</td>
-									<td>{group.incoming}</td>
+									<td>{group.variants.reduce((n,p)=>n+(products.find(r=>productKey(r.product,r.variant)===productKey(p.product,p.variant))?.opening||0),0)}</td><td>{group.variants.reduce((n,p)=>n+(products.find(r=>productKey(r.product,r.variant)===productKey(p.product,p.variant))?.received||0),0)}</td><td>{group.incoming}</td>
 									<td className="stock-outgoing">{group.outgoing}</td>
 									<td>
 										<strong>{group.balance}</strong>
@@ -429,7 +423,7 @@ export default function Inventory({
 											data-records={stock
 												.filter(
 													(r) =>
-														r.date <= today &&
+														r.direction === "in" && r.date === day &&
 														productKey(r.product, r.variant) ===
 															productKey(p.product, p.variant),
 												)
@@ -458,7 +452,7 @@ export default function Inventory({
 												</div>
 											</td>
 											<td>{p.variant || "Tanpa varian"}</td>
-											<td>{p.incoming}</td>
+											<td>{products.find(r=>productKey(r.product,r.variant)===productKey(p.product,p.variant))?.opening||0}</td><td>{products.find(r=>productKey(r.product,r.variant)===productKey(p.product,p.variant))?.received||0}</td><td>{p.incoming}</td>
 											<td className="stock-outgoing">{p.outgoing}</td>
 											<td className={p.balance < 0 ? "negative" : "positive"}>
 												<strong>{p.balance}</strong>
@@ -535,10 +529,10 @@ export default function Inventory({
 							{managing &&
 								[
 									...stock
-										.filter(matchesManaged)
+										.filter(r=>r.date<=day&&matchesManaged(r))
 										.map((r) => ({ ...r, source: "stock" as const })),
 									...sales
-										.filter(matchesManaged)
+										.filter(r=>r.date<=day&&matchesManaged(r))
 										.map((r) => ({ ...r, source: "sale" as const })),
 								]
 									.sort((a, b) =>

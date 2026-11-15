@@ -19,3 +19,18 @@ export function groupProducts(rows:ReturnType<typeof inventorySummary>){
  for(const row of rows){const key=row.product.trim().toLocaleLowerCase('id-ID');const group=groups.get(key)||{key,product:row.product,variants:[],incoming:0,outgoing:0,balance:0};group.variants.push(row);group.incoming+=row.incoming;group.outgoing+=row.outgoing;group.balance+=row.balance;groups.set(key,group)}
  return [...groups.values()];
 }
+
+// Opening stock is derived, never persisted as a duplicate receipt.
+export function dailyInventory(movements:StockMovement[],sales:Transaction[],date:string){
+ const prior=inventorySummary(movements.filter(r=>r.date<date),sales.filter(r=>r.date<date));
+ const current=inventorySummary(movements.filter(r=>r.date===date),sales.filter(r=>r.date===date));
+ const keys=new Set([...prior,...current].map(r=>productKey(r.product,r.variant)));
+ return [...keys].map(key=>{
+  const before=prior.find(r=>productKey(r.product,r.variant)===key);
+  const day=current.find(r=>productKey(r.product,r.variant)===key);
+  const opening=before?.balance||0,received=day?.incoming||0,outgoing=day?.outgoing||0;
+  return {...(day||before)!,createdAt:[day?.createdAt||"",before?.createdAt||""].sort().at(-1)!,opening,received,incoming:opening+received,outgoing,balance:opening+received-outgoing};
+ }).filter(r=>r.opening!==0||r.received!==0||r.outgoing!==0);
+}
+
+export function dailyOutgoing(sales:Transaction[],date:string){return sales.filter(r=>r.date===date).sort((a,b)=>(b.createdAt||" ").localeCompare(a.createdAt||" "))}
