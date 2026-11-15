@@ -33,6 +33,7 @@ import {
 } from "lucide-react";
 import {
 	totals,
+	paymentSummary,
 	transactionSchema,
 	type Transaction,
 	type TransactionInput,
@@ -46,6 +47,7 @@ import { Alert, AlertTitle, AlertDescription } from "./alert";
 import { CircleAlert } from "lucide-react";
 import SalesChart from "./sales-chart";
 import Inventory from "./inventory";
+import PaymentSummaryCard from "./payment-summary-card";
 import Outgoing from "./outgoing";
 import Sidebar, { menus, type MenuId } from "./sidebar";
 import type { StockMovement } from "@/lib/inventory";
@@ -118,6 +120,7 @@ export default function Dashboard({
 		[editing, setEditing] = useState<string>(),
 		[draft, setDraft] = useState(fresh()),
 		[totalInput, setTotalInput] = useState<number | null>(null),
+		[receivedInput,setReceivedInput]=useState<number|null>(null),
 		[error, setError] = useFeedbackState("error"),
 		[toast, setToast] = useFeedbackState(),
 		[pending, start] = useTransition();
@@ -239,9 +242,10 @@ export default function Dashboard({
 		entry: TransactionInput = {
 			...draft,
 			price: Number.isInteger(unitPrice) ? unitPrice : NaN,
+			amountReceived: receivedInput ?? (draft.payment === "Utang" ? 0 : total),
 		},
 		summary = totals(filtered),
-		preview = totals([entry]);
+		receipt = paymentSummary(entry);
 	const catalog = stock.filter((r) => r.direction === "in");
 	const modelOptions = [...new Set(catalog.map((r) => r.product))];
 	const variantOptions = [
@@ -325,6 +329,7 @@ export default function Dashboard({
 	function begin(row?: Transaction) {
 		setImageFile(null);
 		setTotalInput(null);
+		setReceivedInput(row?paymentSummary(row).received:null);
 		setDraft(row ? { ...row } : fresh(localToday()));
 		setEditing(row?.id);
 		setError("");
@@ -352,7 +357,7 @@ export default function Dashboard({
 			setError(
 				Number.isNaN(entry.price) && total >= 0
 					? "Total harga harus habis dibagi jumlah pcs (harga per pcs bilangan bulat)."
-					: "Periksa tanggal, jumlah, nama baju, dan harga.",
+					: "Periksa tanggal, jumlah, nama baju, harga, dan uang diterima.",
 			);
 			return;
 		}
@@ -807,6 +812,10 @@ export default function Dashboard({
 								["Harga total", rupiah(detail.price * detail.quantity)],
 								["Total modal", rupiah(detail.cost * detail.quantity)],
 								["Pembayaran", detail.payment],
+ ["Uang diterima",rupiah(paymentSummary(detail).received)],
+ ["Sisa utang",rupiah(paymentSummary(detail).debt)],
+ ["Kelebihan tanpa kembalian",rupiah(paymentSummary(detail).extra)],
+ ["Status pembayaran",paymentSummary(detail).status],
 								["Catatan", detail.notes || "—"],
 							].map(([label, value]) => (
 								<div key={label}>
@@ -971,8 +980,8 @@ export default function Dashboard({
 							/>
 							<small>
 								{editing
-									? "Total untuk semua pcs. Bisa diubah, misalnya jika pembeli membayar lebih."
-									: `Default ${rupiah(selectedStock?.price ?? 0)} × jumlah pcs. Bisa diubah, misalnya jika pembeli membayar lebih dan tidak minta kembalian.`}
+									? "Total harga barang untuk semua pcs. Uang dari pembeli dicatat pada Uang diterima."
+									: `Default ${rupiah(selectedStock?.price ?? 0)} × jumlah pcs. Uang dari pembeli dicatat pada Uang diterima.`}
 							</small>
 						</label>
 						<label>
@@ -991,12 +1000,11 @@ export default function Dashboard({
 								].map((value) => ({ value, label: value }))}
 							/>
 						</label>
-						{draft.payment === "Utang" && (
-							<p className="full stock-help">
-								Pembeli belum membayar. Tulis nama pembeli dan jatuh tempo di
-								catatan agar mudah ditagih.
-							</p>
-						)}
+<label className="full">Uang diterima (Rp)
+ <input required type="number" min="0" max="100000000000000" step="1" inputMode="numeric" value={Number.isFinite(receipt.received)?receipt.received:""} onChange={e=>setReceivedInput(e.target.value===""?NaN:Number(e.target.value))}/>
+ <small>Masukkan uang yang disimpan dari pembeli setelah kembalian, jika ada. Isi 0 jika belum dibayar; kelebihan yang disimpan dicatat sebagai tambahan tanpa kembalian.</small>
+ </label>
+ {receipt.debt>0&&<p className="full stock-help">Masih ada sisa utang. Tulis nama pembeli dan jatuh tempo di catatan agar mudah ditagih. Saat dilunasi, edit Uang diterima menjadi total pembayaran yang sudah diterima.</p>}
 						{!priceReady && (
 							<Alert className="full" variant="destructive">
 								<CircleAlert size={18} />
@@ -1052,16 +1060,7 @@ export default function Dashboard({
 							)}
 						</div>
 					</div>
-					<div className="preview">
-						<div>
-							<span>Total penjualan</span>
-							<b>
-								{Number.isFinite(preview.revenue)
-									? rupiah(preview.revenue)
-									: "—"}
-							</b>
-						</div>
-					</div>
+					<PaymentSummaryCard row={entry}/>
 					{error && (
 						<p className="error" role="alert">
 							{error}

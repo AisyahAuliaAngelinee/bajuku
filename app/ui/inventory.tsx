@@ -26,6 +26,7 @@ import {
 import {
 	groupProducts,
 	dailyInventory,
+	totalStock,
 	inventorySummary,
 	inventoryHistory,
 	stockSchema,
@@ -134,6 +135,7 @@ export default function Inventory({
 			: productKey(r.product, r.variant) ===
 				productKey(managing.product, managing.variant));
 	const grouped = groupProducts(visible);
+	const allTimeStock=totalStock(stock,sales);
 	const incoming = products.reduce((n, p) => n + p.incoming, 0),
 		outgoing = products.reduce((n, p) => n + p.outgoing, 0),
 		negative = products.some((p) => p.balance < 0);
@@ -277,25 +279,25 @@ export default function Inventory({
 						</strong>
 					</div>
 					<div>
-						<span>Total stock</span>
+						<span>Total stock · seluruh hari</span>
 						<strong
-							className={`stock-status ${incoming > outgoing ? "stock-up" : incoming < outgoing ? "stock-down" : "stock-flat"}`}
-							aria-label={`Total stock ${incoming - outgoing} pcs`}
+							className={`stock-status ${allTimeStock > 0 ? "stock-up" : allTimeStock < 0 ? "stock-down" : "stock-flat"}`}
+							aria-label={`Total stock ${allTimeStock} pcs`}
 							title={
-								incoming > outgoing
+								allTimeStock > 0
 									? "Stock positif"
-									: incoming < outgoing
+									: allTimeStock < 0
 										? "Stock kurang"
 										: "Stock seimbang"
 							}>
-							{incoming > outgoing ? (
+							{allTimeStock > 0 ? (
 								<TrendingUp aria-hidden="true" size={23} />
-							) : incoming < outgoing ? (
+							) : allTimeStock < 0 ? (
 								<TrendingDown aria-hidden="true" size={23} />
 							) : (
 								<Minus aria-hidden="true" size={23} />
 							)}{" "}
-							{Math.abs(incoming - outgoing)} <small>pcs</small>
+							{Math.abs(allTimeStock)} <small>pcs</small>
 						</strong>
 					</div>
 					<div>
@@ -304,7 +306,7 @@ export default function Inventory({
 					</div>
 				</div>
 			)}
-			<p className="stock-help">Tersedia = sisa stock sebelum tanggal terpilih + barang masuk baru. Total stock adalah sisa setelah penjualan hari tersebut. Checkbox hanya memilih barang masuk baru pada tanggal terpilih. Untuk mengoreksi stok bawaan, buka kelola catatan sumber.</p>
+			<p className="stock-help">Tersedia = sisa stock sebelum tanggal terpilih + barang masuk baru. Kolom Sisa akhir hari adalah sisa setelah penjualan hari tersebut. Kartu Total stock menghitung seluruh hari, tanpa mengikuti filter tanggal. Checkbox hanya memilih barang masuk baru pada tanggal terpilih. Untuk mengoreksi stok bawaan, buka kelola catatan sumber.</p>
 			{negative && (
 				<p className="stock-warning">
 					Ada total stock negatif. Lengkapi catatan stok awal/barang masuk atau
@@ -352,7 +354,7 @@ export default function Inventory({
 								onSort={setProductSort}
 							/>
 							<SortHeading
-								label="TOTAL STOCK (PCS)"
+								label="SISA AKHIR HARI (PCS)"
 								column="balance"
 								sort={productSort}
 								onSort={setProductSort}

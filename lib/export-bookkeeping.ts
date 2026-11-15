@@ -1,6 +1,6 @@
 import {chartDays,addExcelCharts} from './excel-charts';
 import {browserTimeZone,localTimestamp} from './local-time';
-import type {Transaction} from './transactions';
+import {paymentSummary,type Transaction} from './transactions';
 
 export type ExportContext = {name: string; date: string; search: string; timeZone?:string};
 const money = (value: number) => new Intl.NumberFormat('id-ID', {maximumFractionDigits: 0}).format(value);
@@ -64,6 +64,17 @@ export async function buildWorkbook(rows: Transaction[], context: ExportContext)
   graph.getRow(5).font={bold:true,color:{argb:'FFFFFFFF'}};graph.getRow(5).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF245D48'}};graph.getRow(5).height=26;
   graph.getColumn(2).numFmt='#,##0';graph.getColumn(3).numFmt='#,##0';graph.views=[{state:'frozen',ySplit:5,showGridLines:false}];
   if(!rows.length){graph.getCell('E5').value='Belum ada transaksi sesuai filter.';}
+  const payments=workbook.addWorksheet('Pembayaran');
+  payments.columns=[16,24,30,22,22,22,26,24].map(width=>({width}));
+  payments.addRow(['Tanggal','No. nota','Produk','Total belanja (Rp)','Uang diterima (Rp)','Sisa utang (Rp)','Kelebihan tanpa kembalian (Rp)','Status']);
+  payments.getRow(1).font={bold:true,color:{argb:'FFFFFFFF'}};
+  payments.getRow(1).fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF245D48'}};
+  payments.getRow(1).height=32;
+  for(const row of rows){const receipt=paymentSummary(row);payments.addRow([row.date,row.invoice,row.product,receipt.total,receipt.received,receipt.debt,receipt.extra,receipt.status]);}
+  for(let r=1;r<=payments.rowCount;r++){payments.getRow(r).alignment={vertical:'middle',wrapText:true};for(let c=1;c<=8;c++)payments.getCell(r,c).border={top:border,bottom:border,left:border,right:border};}
+  for(const col of [4,5,6,7])payments.getColumn(col).numFmt='#,##0';
+  payments.views=[{state:'frozen',ySplit:1}];
+  payments.autoFilter={from:'A1',to:`H${Math.max(1,payments.rowCount)}`};
   workbook.calcProperties.fullCalcOnLoad=true;
   return workbook;
 }
@@ -83,7 +94,7 @@ export async function buildPdf(rows: Transaction[], context: ExportContext) {
   autoTable(doc, {
     startY: start + 5, margin: {left:12, right:12, top:14, bottom:18},
     head: [['Tanggal', 'Produk / varian / nota / catatan', 'Qty', 'Harga/pcs\n(Rp)', 'Modal/pcs\n(Rp)', 'Harga total\n(Rp)', 'Total modal\n(Rp)', 'Pembayaran']],
-    body: rows.length ? rows.map(r => [period(r.date), [r.product, r.variant, r.invoice && `Nota: ${r.invoice}`, r.notes && `Catatan: ${r.notes}`].filter(Boolean).join('\n'), money(r.quantity), money(r.price), money(r.cost), money(r.price*r.quantity), money(r.cost*r.quantity), r.payment]) : [['Tidak ada transaksi sesuai filter.', '', '', '', '', '', '', '']],
+    body: rows.length ? rows.map(r => [period(r.date), [r.product, r.variant, r.invoice && `Nota: ${r.invoice}`, r.notes && `Catatan: ${r.notes}`].filter(Boolean).join('\n'), money(r.quantity), money(r.price), money(r.cost), money(r.price*r.quantity), money(r.cost*r.quantity), `${r.payment}\nDiterima: ${money(paymentSummary(r).received)}\nUtang: ${money(paymentSummary(r).debt)}\nLebih (tanpa kembali): ${money(paymentSummary(r).extra)}`]) : [['Tidak ada transaksi sesuai filter.', '', '', '', '', '', '', '']],
     foot: [['TOTAL', '', money(sums.pieces), '', '', money(sums.revenue), money(sums.cost), '']],
     theme:'grid',tableLineColor:[151,169,155],tableLineWidth:0.25,
     showFoot: 'lastPage', styles: {lineColor:[203,213,204],lineWidth:0.15,fontSize: 7, cellPadding: 2, overflow: 'linebreak'},

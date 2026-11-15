@@ -34,3 +34,6 @@ export function dailyInventory(movements:StockMovement[],sales:Transaction[],dat
 }
 
 export function dailyOutgoing(sales:Transaction[],date:string){return sales.filter(r=>r.date===date).sort((a,b)=>(b.createdAt||" ").localeCompare(a.createdAt||" "))}
+
+/** Full active ledger, independent of daily filters. */
+export function totalStock(movements:StockMovement[],sales:Transaction[]){return inventorySummary(movements,sales).reduce((sum,row)=>sum+row.balance,0)}
